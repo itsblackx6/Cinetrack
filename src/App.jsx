@@ -1,160 +1,72 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, Check, Star, Search, Film, X, Bookmark, 
   GraduationCap, RefreshCw, Eye, AlertCircle, Play, 
   Shuffle, CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv
+  ArrowUpDown, Tv, Flame, Sparkles
 } from 'lucide-react';
 import './App.css';
 
-const API_KEY = 'b9bd48a6';
+const TMDB_API_KEY = '588ffc2c74b931292b25441fe86747cc';
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const BACKDROP_BASE_URL = 'https://image.tmdb.org/t/p/original';
 
-const GENRE_TAGS = ['All', 'Sci-Fi', 'Action', 'Adventure', 'Drama', 'Animation', 'Horror'];
+const GENRE_MAP = {
+  'Trending': 'trending',
+  'Sci-Fi': 878,
+  'Action': 28,
+  'Adventure': 12,
+  'Drama': 18,
+  'Animation': 16,
+  'Horror': 27,
+  'Comedy': 35
+};
 
-// Default high-quality cinema placeholder for broken/missing posters
+const GENRE_TAGS = ['Trending', 'Sci-Fi', 'Action', 'Adventure', 'Drama', 'Animation', 'Horror', 'Comedy'];
+
 const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop';
-
-// Helper function to ensure reliable posters
-const getValidPoster = (posterUrl, title) => {
-  if (!posterUrl || posterUrl === 'N/A' || !posterUrl.startsWith('http')) {
-    const t = title?.toLowerCase() || '';
-    if (t.includes('interstellar')) return 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg';
-    if (t.includes('oppenheimer')) return 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg';
-    if (t.includes('fast') || t.includes('f9')) return 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=500&auto=format&fit=crop';
-    if (t.includes('black clover')) return 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500&auto=format&fit=crop';
-    if (t.includes('dark knight')) return 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg';
-    if (t.includes('inception')) return 'https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg';
-    if (t.includes('wrong turn')) return 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop';
-    return FALLBACK_POSTER;
-  }
-  return posterUrl;
-};
-
-// Verified trailer IDs for instant in-app popups
-const VERIFIED_TRAILERS = {
-  "tt0816692": "zSWdZVtXT7E", // Interstellar
-  "tt15398776": "uYPbbksJxIg", // Oppenheimer
-  "tt5433180": "aSiDu3Ywi8E",  // F9
-  "tt22678604": "M-JD8QqStBg", // Black Clover: Sword of the Wizard King
-  "tt0468569": "EXeTwQWrcwY",  // The Dark Knight
-  "tt1375666": "YoHD9XEInc0",   // Inception
-  "tt0295700": "9lIUi6xWflg"   // Wrong Turn
-};
-
-// Curated Where-to-Watch Streaming Platform mappings
-const STREAMING_PLATFORMS = {
-  "tt0816692": [
-    { name: "Prime Video", color: "#00a8e1", url: "https://www.primevideo.com" },
-    { name: "JioCinema", color: "#e11d48", url: "https://www.jiocinema.com" }
-  ],
-  "tt15398776": [
-    { name: "JioCinema", color: "#e11d48", url: "https://www.jiocinema.com" },
-    { name: "Prime Video", color: "#00a8e1", url: "https://www.primevideo.com" }
-  ],
-  "tt5433180": [
-    { name: "Netflix", color: "#e50914", url: "https://www.netflix.com" },
-    { name: "Prime Video", color: "#00a8e1", url: "https://www.primevideo.com" }
-  ],
-  "tt22678604": [
-    { name: "Netflix", color: "#e50914", url: "https://www.netflix.com" }
-  ],
-  "tt0468569": [
-    { name: "Prime Video", color: "#00a8e1", url: "https://www.primevideo.com" },
-    { name: "JioCinema", color: "#e11d48", url: "https://www.jiocinema.com" }
-  ],
-  "tt1375666": [
-    { name: "Netflix", color: "#e50914", url: "https://www.netflix.com" },
-    { name: "Prime Video", color: "#00a8e1", url: "https://www.primevideo.com" }
-  ],
-  "tt0295700": [
-    { name: "Prime Video", color: "#00a8e1", url: "https://www.primevideo.com" }
-  ]
-};
+const FALLBACK_BACKDROP = 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1200&auto=format&fit=crop';
 
 const INITIAL_POPULAR = [
   {
+    id: 157336,
     Title: "Interstellar",
     Year: "2014",
     imdbRating: "8.7",
-    imdbID: "tt0816692",
     Poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-    backdrop: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1200&auto=format&fit=crop",
-    Plot: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.",
-    Genre: "Adventure, Drama, Sci-Fi",
-    Actors: "Matthew McConaughey, Anne Hathaway, Jessica Chastain",
+    backdrop: "https://image.tmdb.org/t/p/original/rAiYTua5ht9AcCQqqv6ZIG9qZmh.jpg",
+    Plot: "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass human space travel limitations.",
+    Genre: "Adventure, Drama, Science Fiction",
+    Actors: "Matthew McConaughey, Anne Hathaway",
     Director: "Christopher Nolan",
-    Released: "07 Nov 2014",
     Runtime: "169 min"
   },
   {
+    id: 872585,
     Title: "Oppenheimer",
     Year: "2023",
     imdbRating: "8.9",
-    imdbID: "tt15398776",
     Poster: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
-    backdrop: "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=1200&auto=format&fit=crop",
-    Plot: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.",
-    Genre: "Biography, Drama, History",
-    Actors: "Cillian Murphy, Emily Blunt, Matt Damon",
+    backdrop: "https://image.tmdb.org/t/p/original/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg",
+    Plot: "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
+    Genre: "Drama, History",
+    Actors: "Cillian Murphy, Emily Blunt",
     Director: "Christopher Nolan",
-    Released: "21 Jul 2023",
-    Runtime: "180 min"
+    Runtime: "181 min"
   },
   {
-    Title: "F9: The Fast Saga",
-    Year: "2021",
-    imdbRating: "5.2",
-    imdbID: "tt5433180",
-    Poster: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=500&auto=format&fit=crop",
-    backdrop: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=1200&auto=format&fit=crop",
-    Plot: "Dom and the crew must take on an international terrorist who turns out to be Dom and Mia's estranged brother.",
-    Genre: "Action, Adventure, Crime",
-    Actors: "Vin Diesel, Michelle Rodriguez, John Cena",
-    Director: "Justin Lin",
-    Released: "25 Jun 2021",
-    Runtime: "143 min"
-  },
-  {
-    Title: "Black Clover: Sword of the Wizard King",
-    Year: "2023",
-    imdbRating: "7.4",
-    imdbID: "tt22678604",
-    Poster: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500&auto=format&fit=crop",
-    backdrop: "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1200&auto=format&fit=crop",
-    Plot: "In a world where magic is everything, Asta, a boy who was born with no magic, aims to become the Wizard King.",
-    Genre: "Animation, Action, Adventure",
-    Actors: "Gakuto Kajiwara, Nobunaga Shimazaki, Jun'ichi Suwabe",
-    Director: "Ayataka Tanemura",
-    Released: "16 Jun 2023",
-    Runtime: "113 min"
-  },
-  {
+    id: 155,
     Title: "The Dark Knight",
     Year: "2008",
     imdbRating: "9.0",
-    imdbID: "tt0468569",
     Poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-    backdrop: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1200&auto=format&fit=crop",
-    Plot: "When the menace known as the Joker wreaks havoc on Gotham, Batman must accept one of the greatest psychological and physical tests.",
+    backdrop: "https://image.tmdb.org/t/p/original/nMKdUUepR0i5zn0y1T4CsSB5chy.jpg",
+    Plot: "Batman raises the stakes in his war on crime and sets out to dismantle the remaining criminal organizations that plague the streets.",
     Genre: "Action, Crime, Drama",
-    Actors: "Christian Bale, Heath Ledger, Aaron Eckhart",
+    Actors: "Christian Bale, Heath Ledger",
     Director: "Christopher Nolan",
-    Released: "18 Jul 2008",
     Runtime: "152 min"
-  },
-  {
-    Title: "Inception",
-    Year: "2010",
-    imdbRating: "8.8",
-    imdbID: "tt1375666",
-    Poster: "https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg",
-    backdrop: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop",
-    Plot: "A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea.",
-    Genre: "Action, Adventure, Sci-Fi",
-    Actors: "Leonardo DiCaprio, Joseph Gordon-Levitt",
-    Director: "Christopher Nolan",
-    Released: "16 Jul 2010",
-    Runtime: "148 min"
   }
 ];
 
@@ -162,7 +74,7 @@ export default function App() {
   const [movies, setMovies] = useState(INITIAL_POPULAR);
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('All');
+  const [selectedGenre, setSelectedGenre] = useState('Trending');
   const [sortBy, setSortBy] = useState('default');
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [activeTrailer, setActiveTrailer] = useState(null);
@@ -172,12 +84,12 @@ export default function App() {
   const [watchlistFilter, setWatchlistFilter] = useState('All');
   const [toastMessage, setToastMessage] = useState(null);
 
-  const featuredMovie = INITIAL_POPULAR[featuredIndex] || INITIAL_POPULAR[0];
+  const featuredMovie = movies[featuredIndex] || INITIAL_POPULAR[0];
 
-  // Crash-proof Watchlist stored in LocalStorage
+  // Crash-proof Watchlist
   const [watchlist, setWatchlist] = useState(() => {
     try {
-      const saved = localStorage.getItem('cinetracker_watchlist');
+      const saved = localStorage.getItem('cinetracker_tmdb_watchlist');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -186,11 +98,65 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('cinetracker_watchlist', JSON.stringify(watchlist));
+      localStorage.setItem('cinetracker_tmdb_watchlist', JSON.stringify(watchlist));
     } catch (err) {
       console.error("Storage write failed:", err);
     }
   }, [watchlist]);
+
+  // Hardware Back Button Controller
+  const pushedHistoryRef = useRef(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      pushedHistoryRef.current = false;
+      if (activeTrailer) {
+        setActiveTrailer(null);
+      } else if (selectedMovie) {
+        setSelectedMovie(null);
+      } else if (activeTab === 'watchlist') {
+        setActiveTab('explore');
+      }
+    };
+
+    if (activeTrailer || selectedMovie || activeTab === 'watchlist') {
+      window.history.pushState({ modalOrTab: true }, '');
+      pushedHistoryRef.current = true;
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [activeTrailer, selectedMovie, activeTab]);
+
+  const closeModalsSafely = () => {
+    if (pushedHistoryRef.current) {
+      window.history.back();
+    } else {
+      setActiveTrailer(null);
+      setSelectedMovie(null);
+    }
+  };
+
+  // Scroll lock & Escape key
+  useEffect(() => {
+    if (selectedMovie || activeTrailer) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') closeModalsSafely();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = 'unset';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedMovie, activeTrailer]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -200,53 +166,91 @@ export default function App() {
   };
 
   const handleNextHero = () => {
-    setFeaturedIndex((prev) => (prev + 1) % INITIAL_POPULAR.length);
+    setFeaturedIndex((prev) => (prev + 1) % (movies.length > 5 ? 5 : movies.length));
   };
 
-  // Worldwide live search with API fallback
+  // Formatter
+  const formatTmdbMovie = (item) => ({
+    id: item.id,
+    Title: item.title || item.original_title || 'Untitled Movie',
+    Year: item.release_date ? item.release_date.split('-')[0] : '2024',
+    imdbRating: item.vote_average ? item.vote_average.toFixed(1) : '7.5',
+    Poster: item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : FALLBACK_POSTER,
+    backdrop: item.backdrop_path ? `${BACKDROP_BASE_URL}${item.backdrop_path}` : FALLBACK_BACKDROP,
+    Plot: item.overview || 'No synopsis provided.',
+    Genre: 'Cinema',
+    Actors: 'Featured Cast',
+    Director: 'Director',
+    Runtime: '120 min'
+  });
+
+  // Initial Trending Fetch
+  useEffect(() => {
+    const fetchInitial = async () => {
+      try {
+        const res = await fetch(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`);
+        const data = await res.json();
+        if (data && data.results && data.results.length > 0) {
+          setMovies(data.results.slice(0, 18).map(formatTmdbMovie));
+        }
+      } catch (err) {
+        console.warn("Fallback mode:", err);
+      }
+    };
+    fetchInitial();
+  }, []);
+
+  // Search API
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
-    const query = searchQuery.trim().toLowerCase();
+    const query = (searchQuery || '').trim();
     if (!query) {
-      setMovies(INITIAL_POPULAR);
-      setErrorMessage(null);
+      handleGenreChange('Trending');
       return;
     }
 
     setIsLoading(true);
     setErrorMessage(null);
-    setSelectedGenre('All');
-    
+
     try {
-      const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=${API_KEY}`);
+      const res = await fetch(
+        `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
+      );
       const data = await res.json();
 
-      if (data.Response === 'True' && data.Search) {
-        const fullDetails = await Promise.all(
-          data.Search.slice(0, 8).map(async (item) => {
-            try {
-              const itemRes = await fetch(`https://www.omdbapi.com/?i=${item.imdbID}&apikey=${API_KEY}`);
-              const itemData = await itemRes.json();
-              return itemData.Response === 'True' ? itemData : item;
-            } catch {
-              return item;
-            }
-          })
-        );
-        setMovies(fullDetails);
+      if (data && data.results && data.results.length > 0) {
+        setMovies(data.results.map(formatTmdbMovie));
       } else {
-        const localMatches = INITIAL_POPULAR.filter(
-          (m) => m.Title.toLowerCase().includes(query) || m.Genre?.toLowerCase().includes(query)
-        );
-        setMovies(localMatches);
-        if (localMatches.length === 0) {
-          setErrorMessage(`No movies found matching "${searchQuery}". Showing local catalog.`);
-        }
+        setMovies(INITIAL_POPULAR);
+        setErrorMessage(`No titles found matching "${searchQuery}". Showing popular cinema.`);
       }
     } catch (err) {
-      const localMatches = INITIAL_POPULAR.filter((m) => m.Title.toLowerCase().includes(query));
-      setMovies(localMatches);
-      setErrorMessage("Network issue detected. Displaying local cache safely.");
+      setMovies(INITIAL_POPULAR);
+      setErrorMessage("Network issue detected. Running in offline safety mode.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Genre Change
+  const handleGenreChange = async (genre) => {
+    setSelectedGenre(genre);
+    setSearchQuery('');
+    setErrorMessage(null);
+    setIsLoading(true);
+
+    try {
+      const endpoint = genre === 'Trending'
+        ? `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`
+        : `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${GENRE_MAP[genre]}&sort_by=popularity.desc`;
+
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      if (data && data.results) {
+        setMovies(data.results.slice(0, 18).map(formatTmdbMovie));
+      }
+    } catch {
+      setMovies(INITIAL_POPULAR);
     } finally {
       setIsLoading(false);
     }
@@ -254,16 +258,57 @@ export default function App() {
 
   const clearSearch = () => {
     setSearchQuery('');
-    setSelectedGenre('All');
-    setSortBy('default');
-    setMovies(INITIAL_POPULAR);
-    setErrorMessage(null);
+    handleGenreChange('Trending');
+  };
+
+  // Movie Details & Extra Metadata
+  const openMovieDetails = async (movie) => {
+    setSelectedMovie(movie);
+    try {
+      const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
+      const details = await res.json();
+      if (details) {
+        const genres = details.genres ? details.genres.map(g => g.name).join(', ') : movie.Genre;
+        const directorObj = details.credits?.crew?.find(c => c.job === 'Director');
+        const castStr = details.credits?.cast ? details.credits.cast.slice(0, 4).map(c => c.name).join(', ') : movie.Actors;
+        const runtimeStr = details.runtime ? `${details.runtime} min` : movie.Runtime;
+
+        setSelectedMovie(prev => ({
+          ...prev,
+          Genre: genres,
+          Director: directorObj ? directorObj.name : 'Not Specified',
+          Actors: castStr,
+          Runtime: runtimeStr,
+          Plot: details.overview || prev.Plot
+        }));
+      }
+    } catch (e) {
+      console.warn("Details fetch error:", e);
+    }
+  };
+
+  // TMDB Real YouTube Trailer Fetch
+  const handlePlayTrailer = async (movie) => {
+    try {
+      const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}`);
+      const data = await res.json();
+      const trailer = data?.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
+
+      if (trailer && trailer.key) {
+        setActiveTrailer({ type: 'embed', videoId: trailer.key, title: movie.Title });
+      } else {
+        setActiveTrailer({ type: 'external', title: movie.Title, year: movie.Year, poster: movie.Poster });
+      }
+    } catch {
+      setActiveTrailer({ type: 'external', title: movie.Title, year: movie.Year, poster: movie.Poster });
+    }
   };
 
   const toggleWatchlist = (movie) => {
-    const exists = watchlist.some((m) => m.imdbID === movie.imdbID);
+    if (!movie?.id) return;
+    const exists = watchlist.some((m) => m.id === movie.id);
     if (exists) {
-      setWatchlist(watchlist.filter((m) => m.imdbID !== movie.imdbID));
+      setWatchlist(watchlist.filter((m) => m.id !== movie.id));
       showToast(`Removed "${movie.Title}"`);
     } else {
       setWatchlist([...watchlist, { ...movie, userStatus: 'Plan to Watch', personalRating: 0 }]);
@@ -271,106 +316,80 @@ export default function App() {
     }
   };
 
-  const updateStatus = (imdbID, newStatus) => {
-    setWatchlist(
-      watchlist.map((m) => (m.imdbID === imdbID ? { ...m, userStatus: newStatus } : m))
-    );
+  const updateStatus = (id, newStatus) => {
+    setWatchlist(watchlist.map((m) => (m.id === id ? { ...m, userStatus: newStatus } : m)));
     showToast(`Status: ${newStatus}`);
   };
 
-  const setUserRating = (imdbID, rating) => {
-    setWatchlist(
-      watchlist.map((m) => (m.imdbID === imdbID ? { ...m, personalRating: rating } : m))
-    );
+  const setUserRating = (id, rating) => {
+    setWatchlist(watchlist.map((m) => (m.id === id ? { ...m, personalRating: rating } : m)));
     showToast(`Rated ${rating} Star${rating > 1 ? 's' : ''}!`);
   };
 
-  const isMovieInWatchlist = (imdbID) => watchlist.some((m) => m.imdbID === imdbID);
+  const isMovieInWatchlist = (id) => watchlist.some((m) => m.id === id);
 
-  // Watchlist Export Feature (JSON Backup File)
   const exportWatchlist = () => {
     if (watchlist.length === 0) {
-      showToast("Watchlist is empty! Add movies first.");
+      showToast("Watchlist is empty!");
       return;
     }
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(watchlist, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `cinetrack_watchlist_${Date.now()}.json`);
+    downloadAnchor.setAttribute("download", `cinetrack_tmdb_watchlist_${Date.now()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
     showToast("Watchlist backup downloaded!");
   };
 
-  // Watchlist Statistics Calculation
   const stats = useMemo(() => {
     const total = watchlist.length;
-    const completed = watchlist.filter(m => m.userStatus === 'Completed').length;
-    const ratings = watchlist.map(m => parseFloat(m.imdbRating)).filter(r => !isNaN(r));
+    const completed = watchlist.filter((m) => m.userStatus === 'Completed').length;
+    const ratings = watchlist.map((m) => parseFloat(m.imdbRating)).filter((r) => !isNaN(r));
     const avgRating = ratings.length > 0 ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : 'N/A';
     return { total, completed, avgRating };
   }, [watchlist]);
 
-  // Combined Filter & Sorting Logic
   const displayedMovies = useMemo(() => {
-    let list = activeTab === 'explore'
-      ? movies.filter((m) => {
-          if (selectedGenre === 'All') return true;
-          return m.Genre?.toLowerCase().includes(selectedGenre.toLowerCase());
-        })
-      : watchlist.filter((m) => (watchlistFilter === 'All' ? true : m.userStatus === watchlistFilter));
+    let list = activeTab === 'explore' ? movies : watchlist.filter((m) => (watchlistFilter === 'All' ? true : m.userStatus === watchlistFilter));
 
     if (sortBy === 'rating') {
       list = [...list].sort((a, b) => (parseFloat(b.imdbRating) || 0) - (parseFloat(a.imdbRating) || 0));
     } else if (sortBy === 'year') {
       list = [...list].sort((a, b) => (parseInt(b.Year) || 0) - (parseInt(a.Year) || 0));
     } else if (sortBy === 'title') {
-      list = [...list].sort((a, b) => a.Title.localeCompare(b.Title));
+      list = [...list].sort((a, b) => (a.Title || '').localeCompare(b.Title || ''));
     }
 
     return list;
-  }, [activeTab, movies, watchlist, selectedGenre, watchlistFilter, sortBy]);
-
-  // Bulletproof Smart Trailer Handler
-  const handlePlayTrailer = (movie) => {
-    const videoId = VERIFIED_TRAILERS[movie.imdbID];
-    if (videoId) {
-      setActiveTrailer({ type: 'embed', videoId, title: movie.Title });
-    } else {
-      setActiveTrailer({ 
-        type: 'external', 
-        title: movie.Title, 
-        year: movie.Year, 
-        poster: getValidPoster(movie.Poster, movie.Title) 
-      });
-    }
-  };
+  }, [activeTab, movies, watchlist, watchlistFilter, sortBy]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: '#0b0f19', color: '#f8fafc' }}>
+    <div style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: '#0b0f19', color: '#f8fafc' }}>
       
       {/* Toast Alert */}
       {toastMessage && (
         <div style={{
           position: 'fixed',
-          top: '20px',
+          top: '16px',
           left: '50%',
           transform: 'translateX(-50%)',
-          background: 'rgba(15, 23, 42, 0.95)',
+          background: 'rgba(15, 23, 42, 0.96)',
           border: '1px solid #38bdf8',
           boxShadow: '0 8px 24px rgba(56, 189, 248, 0.25)',
           color: '#f8fafc',
-          padding: '10px 18px',
-          borderRadius: '30px',
-          zIndex: 160,
-          fontSize: '0.85rem',
+          padding: '8px 16px',
+          borderRadius: '24px',
+          zIndex: 1200,
+          fontSize: '0.8rem',
           fontWeight: 600,
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: '6px',
+          whiteSpace: 'nowrap'
         }}>
-          <CheckCircle2 size={16} color="#38bdf8" />
+          <CheckCircle2 size={15} color="#38bdf8" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -382,7 +401,7 @@ export default function App() {
           <span>CineTracker</span>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div className="nav-actions">
           <button
             onClick={() => {
               setActiveTab('explore');
@@ -394,7 +413,8 @@ export default function App() {
               color: activeTab === 'explore' ? '#38bdf8' : '#94a3b8',
               fontWeight: 700,
               cursor: 'pointer',
-              fontSize: '0.85rem'
+              fontSize: '0.8rem',
+              padding: '4px'
             }}
           >
             Explore
@@ -407,17 +427,18 @@ export default function App() {
               color: activeTab === 'watchlist' ? '#38bdf8' : '#94a3b8',
               fontWeight: 700,
               cursor: 'pointer',
-              fontSize: '0.85rem',
+              fontSize: '0.8rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              padding: '4px'
             }}
           >
-            <Bookmark size={14} />
+            <Bookmark size={13} />
             Watchlist ({watchlist.length})
           </button>
 
-          {/* Student Credit Badge */}
+          {/* Student Persona Credit */}
           <div
             style={{
               display: 'flex',
@@ -427,12 +448,13 @@ export default function App() {
               border: '1px solid rgba(56, 189, 248, 0.3)',
               padding: '4px 8px',
               borderRadius: '20px',
-              fontSize: '0.7rem',
+              fontSize: '0.68rem',
               color: '#7dd3fc',
-              fontWeight: 600
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
             }}
           >
-            <GraduationCap size={13} color="#38bdf8" />
+            <GraduationCap size={12} color="#38bdf8" />
             <span>Anshu Maurya • TY BCA</span>
           </div>
         </div>
@@ -444,46 +466,43 @@ export default function App() {
           <section
             className="hero"
             style={{
-              backgroundImage: `url(${
-                featuredMovie.backdrop ||
-                'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1200&auto=format&fit=crop'
-              })`
+              backgroundImage: `url(${featuredMovie.backdrop})`
             }}
           >
             <div className="hero-overlay">
               <div className="hero-content">
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span
                     style={{
                       background: '#f5c518',
                       color: '#000',
                       fontWeight: 800,
-                      padding: '2px 8px',
+                      padding: '2px 6px',
                       borderRadius: '4px',
-                      fontSize: '0.8rem'
+                      fontSize: '0.72rem'
                     }}
                   >
-                    IMDb {featuredMovie.imdbRating}
+                    TMDB {featuredMovie.imdbRating}
                   </span>
-                  <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
+                  <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem' }}>
                     {featuredMovie.Year}
                   </span>
-                  <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
-                    {featuredMovie.Genre}
+                  <span style={{ background: 'rgba(56,189,248,0.2)', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <Sparkles size={11} /> Featured
                   </span>
                 </div>
 
                 <h1 className="hero-title">{featuredMovie.Title}</h1>
                 <p className="hero-overview">{featuredMovie.Plot}</p>
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
-                  <button className="btn-primary" onClick={() => setSelectedMovie(featuredMovie)}>
-                    <Eye size={16} /> View Details
+                <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                  <button className="btn-primary" onClick={() => openMovieDetails(featuredMovie)}>
+                    <Eye size={15} /> View Details
                   </button>
                   <button
                     onClick={() => toggleWatchlist(featuredMovie)}
                     style={{
-                      padding: '10px 18px',
+                      padding: '9px 14px',
                       borderRadius: '8px',
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                       background: 'rgba(255, 255, 255, 0.08)',
@@ -493,16 +512,17 @@ export default function App() {
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '6px',
+                      fontSize: '0.82rem'
                     }}
                   >
-                    {isMovieInWatchlist(featuredMovie.imdbID) ? (
+                    {isMovieInWatchlist(featuredMovie.id) ? (
                       <>
-                        <Check size={16} color="#4ade80" /> In Watchlist
+                        <Check size={15} color="#4ade80" /> Saved
                       </>
                     ) : (
                       <>
-                        <Plus size={16} /> Add to Watchlist
+                        <Plus size={15} /> Add Watchlist
                       </>
                     )}
                   </button>
@@ -510,7 +530,7 @@ export default function App() {
                     onClick={handleNextHero}
                     title="Next Highlight"
                     style={{
-                      padding: '10px 14px',
+                      padding: '9px 12px',
                       borderRadius: '8px',
                       border: '1px solid rgba(255, 255, 255, 0.15)',
                       background: 'rgba(255, 255, 255, 0.05)',
@@ -519,10 +539,10 @@ export default function App() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      fontSize: '0.8rem'
+                      fontSize: '0.78rem'
                     }}
                   >
-                    <Shuffle size={14} /> Next
+                    <Shuffle size={13} /> Next
                   </button>
                 </div>
               </div>
@@ -530,41 +550,42 @@ export default function App() {
           </section>
         )}
 
-        {/* Watchlist Analytics Quick Stats Bar */}
+        {/* Watchlist Quick Stats */}
         {activeTab === 'watchlist' && (
           <div style={{
-            marginTop: '1.2rem',
+            marginTop: '0.5rem',
+            marginBottom: '1rem',
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '10px',
+            gap: '8px',
             background: 'rgba(21, 28, 47, 0.6)',
-            padding: '12px',
+            padding: '10px',
             borderRadius: '10px',
             border: '1px solid rgba(255,255,255,0.06)'
           }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Total Saved</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>{stats.total}</div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Saved</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#38bdf8' }}>{stats.total}</div>
             </div>
             <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.08)', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Completed</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#4ade80' }}>{stats.completed}</div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Done</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#4ade80' }}>{stats.completed}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Avg IMDb</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f5c518' }}>{stats.avgRating}</div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Avg Rating</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f5c518' }}>{stats.avgRating}</div>
             </div>
           </div>
         )}
 
-        {/* Live Search Bar */}
+        {/* Search Bar */}
         {activeTab === 'explore' && (
           <form onSubmit={handleSearch} className="search-wrapper">
             <div className="search-input-box">
-              <Search size={18} color="#38bdf8" />
+              <Search size={16} color="#38bdf8" />
               <input
                 type="text"
-                placeholder="Search worldwide (e.g. Star Wars, Batman, Oppenheimer)..."
+                placeholder="Search movies (e.g. Inception, Batman)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -574,32 +595,32 @@ export default function App() {
                   onClick={clearSearch}
                   style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               )}
             </div>
             <button type="submit" className="btn-primary">
-              {isLoading ? 'Searching...' : 'Search'}
+              {isLoading ? '...' : 'Search'}
             </button>
           </form>
         )}
 
-        {/* Genre Chips & Sort Row (Explore Tab) */}
+        {/* Genre Chips & Sort Row */}
         {activeTab === 'explore' && (
-          <div style={{ marginTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none', flex: 1 }}>
+          <div style={{ margin: '0.6rem 0 1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="no-scrollbar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', flex: 1 }}>
               {GENRE_TAGS.map((genre) => (
                 <button
                   key={genre}
-                  onClick={() => setSelectedGenre(genre)}
+                  onClick={() => handleGenreChange(genre)}
                   style={{
-                    padding: '5px 12px',
-                    borderRadius: '20px',
+                    padding: '4px 10px',
+                    borderRadius: '16px',
                     border: selectedGenre === genre ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
                     background: selectedGenre === genre ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.03)',
                     color: selectedGenre === genre ? '#38bdf8' : '#94a3b8',
                     fontWeight: selectedGenre === genre ? 700 : 500,
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap'
                   }}
@@ -609,9 +630,8 @@ export default function App() {
               ))}
             </div>
 
-            {/* Sorting Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ArrowUpDown size={14} color="#94a3b8" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <ArrowUpDown size={13} color="#94a3b8" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -620,16 +640,16 @@ export default function App() {
                   color: '#38bdf8',
                   border: '1px solid rgba(56, 189, 248, 0.3)',
                   borderRadius: '6px',
-                  padding: '4px 8px',
-                  fontSize: '0.75rem',
+                  padding: '3px 6px',
+                  fontSize: '0.72rem',
                   outline: 'none',
                   cursor: 'pointer'
                 }}
               >
                 <option value="default">Default</option>
                 <option value="rating">Top Rated</option>
-                <option value="year">Newest First</option>
-                <option value="title">Alphabetical</option>
+                <option value="year">Newest</option>
+                <option value="title">A-Z</option>
               </select>
             </div>
           </div>
@@ -638,38 +658,38 @@ export default function App() {
         {/* Error Notice */}
         {errorMessage && (
           <div style={{
-            marginTop: '1rem',
+            marginBottom: '1rem',
             background: 'rgba(239, 68, 68, 0.12)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: '8px',
             color: '#fca5a5',
-            fontSize: '0.8rem',
+            fontSize: '0.78rem',
             display: 'flex',
             alignItems: 'center',
             gap: '8px'
           }}>
-            <AlertCircle size={16} color="#f87171" />
+            <AlertCircle size={15} color="#f87171" />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        {/* Watchlist Filter Buttons & Action Tools */}
+        {/* Watchlist Filter Buttons */}
         {activeTab === 'watchlist' && (
-          <div style={{ marginTop: '1.2rem', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ margin: '0.8rem 0 1.2rem 0', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {['All', 'Plan to Watch', 'Watching', 'Completed'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setWatchlistFilter(status)}
                   style={{
-                    padding: '5px 12px',
-                    borderRadius: '20px',
+                    padding: '4px 10px',
+                    borderRadius: '16px',
                     border: watchlistFilter === status ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
                     background: watchlistFilter === status ? '#38bdf8' : 'rgba(255, 255, 255, 0.05)',
                     color: watchlistFilter === status ? '#0b0f19' : '#cbd5e1',
                     fontWeight: 600,
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     cursor: 'pointer'
                   }}
                 >
@@ -678,7 +698,7 @@ export default function App() {
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 onClick={exportWatchlist}
                 title="Export list as JSON"
@@ -686,16 +706,16 @@ export default function App() {
                   background: 'rgba(56, 189, 248, 0.12)',
                   border: '1px solid rgba(56, 189, 248, 0.3)',
                   color: '#7dd3fc',
-                  padding: '5px 10px',
+                  padding: '4px 8px',
                   borderRadius: '6px',
-                  fontSize: '0.75rem',
+                  fontSize: '0.72rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px'
                 }}
               >
-                <Download size={13} /> Export
+                <Download size={12} /> Export
               </button>
 
               {watchlist.length > 0 && (
@@ -710,16 +730,16 @@ export default function App() {
                     background: 'transparent',
                     border: '1px solid rgba(239, 68, 68, 0.3)',
                     color: '#f87171',
-                    padding: '5px 10px',
+                    padding: '4px 8px',
                     borderRadius: '6px',
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px'
                   }}
                 >
-                  <Trash2 size={13} /> Clear
+                  <Trash2 size={12} /> Clear
                 </button>
               )}
             </div>
@@ -727,15 +747,13 @@ export default function App() {
         )}
 
         {/* Movies Grid */}
-        <section style={{ marginTop: '1.5rem' }}>
-          <h2 className="section-title">
-            <Film size={18} color="#38bdf8" />
+        <section>
+          <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {selectedGenre === 'Trending' ? <Flame size={18} color="#f97316" /> : <Film size={18} color="#38bdf8" />}
             {activeTab === 'explore'
               ? searchQuery
                 ? `Results for "${searchQuery}"`
-                : selectedGenre !== 'All' 
-                  ? `${selectedGenre} Cinema` 
-                  : 'Trending Cinema'
+                : `${selectedGenre} Cinema`
               : `My Watchlist (${displayedMovies.length})`}
           </h2>
 
@@ -743,168 +761,138 @@ export default function App() {
             <div
               style={{
                 textAlign: 'center',
-                padding: '4rem 1rem',
+                padding: '3rem 1rem',
                 color: '#94a3b8',
                 background: 'rgba(255,255,255,0.02)',
                 borderRadius: '12px',
                 border: '1px dashed rgba(255,255,255,0.1)'
               }}
             >
-              <p style={{ fontSize: '1rem', marginBottom: '8px', color: '#f1f5f9' }}>
+              <p style={{ fontSize: '0.9rem', marginBottom: '8px', color: '#f1f5f9' }}>
                 {activeTab === 'explore'
                   ? `No titles found under selected parameters.`
                   : 'No titles saved under this category yet.'}
               </p>
               {activeTab === 'explore' && (
-                <div style={{ marginTop: '16px' }}>
+                <div style={{ marginTop: '12px' }}>
                   <button
                     onClick={clearSearch}
                     className="btn-primary"
-                    style={{ fontSize: '0.8rem', padding: '6px 12px', margin: '0 auto' }}
+                    style={{ fontSize: '0.75rem', padding: '6px 12px', margin: '0 auto' }}
                   >
-                    <RefreshCw size={14} /> Reset Filters
+                    <RefreshCw size={13} /> Reset Filters
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            <div 
-              className="card-grid" 
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}
-            >
-              {displayedMovies.map((movie) => {
-                const posterImg = getValidPoster(movie.Poster, movie.Title);
-                return (
-                  <div
-                    key={movie.imdbID || Math.random()}
-                    className="movie-card"
-                    onClick={() => setSelectedMovie(movie)}
-                    style={{
-                      background: '#151c2f',
-                      borderRadius: '10px',
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
-                      display: 'flex',
-                      flexDirection: 'column'
+            <div className="card-grid">
+              {displayedMovies.map((movie) => (
+                <div
+                  key={movie?.id || Math.random()}
+                  className="movie-card"
+                  onClick={() => openMovieDetails(movie)}
+                >
+                  <div className="rating-badge">
+                    <Star size={10} fill="#fbbf24" color="#fbbf24" />
+                    <span>{movie?.imdbRating}</span>
+                  </div>
+
+                  <img
+                    src={movie?.Poster || FALLBACK_POSTER}
+                    alt={movie?.Title || 'Movie'}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = FALLBACK_POSTER;
                     }}
-                  >
-                    <div className="rating-badge" style={{
-                      position: 'absolute',
-                      top: '6px',
-                      right: '6px',
-                      background: 'rgba(11, 15, 25, 0.85)',
-                      padding: '2px 5px',
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      color: '#fff',
-                      zIndex: 2
-                    }}>
-                      <Star size={11} fill="#fbbf24" color="#fbbf24" />
-                      <span>{movie.imdbRating && movie.imdbRating !== 'N/A' ? movie.imdbRating : '7.5'}</span>
+                    className="card-poster"
+                    referrerPolicy="no-referrer"
+                  />
+
+                  <div className="card-info">
+                    <div>
+                      <div className="card-title">
+                        {movie?.Title}
+                      </div>
+                      <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '1px' }}>
+                        {movie?.Year || '2024'} • TMDB VERIFIED
+                      </div>
                     </div>
 
-                    <img
-                      src={posterImg}
-                      alt={movie.Title}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = FALLBACK_POSTER;
-                      }}
-                      style={{ width: '100%', height: '170px', objectFit: 'cover' }}
-                      referrerPolicy="no-referrer"
-                    />
-
-                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
-                      <div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {movie.Title}
+                    {/* Watchlist Tools */}
+                    {activeTab === 'watchlist' && (
+                      <div style={{ margin: '6px 0 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
+                          {[1, 2, 3, 4, 5].map((starVal) => (
+                            <Star
+                              key={starVal}
+                              size={11}
+                              onClick={() => setUserRating(movie.id, starVal)}
+                              fill={(movie.personalRating || 0) >= starVal ? "#fbbf24" : "none"}
+                              color={(movie.personalRating || 0) >= starVal ? "#fbbf24" : "#475569"}
+                              style={{ cursor: 'pointer' }}
+                            />
+                          ))}
                         </div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.73rem', marginTop: '2px' }}>
-                          {movie.Year} • {movie.Type ? movie.Type.toUpperCase() : 'MOVIE'}
-                        </div>
-                      </div>
-
-                      {/* Watchlist Rating & Status Tools */}
-                      {activeTab === 'watchlist' && (
-                        <div style={{ margin: '6px 0 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
-                            {[1, 2, 3, 4, 5].map((starVal) => (
-                              <Star
-                                key={starVal}
-                                size={12}
-                                onClick={() => setUserRating(movie.imdbID, starVal)}
-                                fill={(movie.personalRating || 0) >= starVal ? "#fbbf24" : "none"}
-                                color={(movie.personalRating || 0) >= starVal ? "#fbbf24" : "#475569"}
-                                style={{ cursor: 'pointer' }}
-                              />
-                            ))}
-                          </div>
-                          <select
-                            value={movie.userStatus || 'Plan to Watch'}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => updateStatus(movie.imdbID, e.target.value)}
-                            style={{
-                              background: '#0b0f19',
-                              color: '#38bdf8',
-                              border: '1px solid rgba(56, 189, 248, 0.3)',
-                              borderRadius: '4px',
-                              padding: '1px 4px',
-                              fontSize: '0.65rem',
-                              outline: 'none'
-                            }}
-                          >
-                            <option value="Plan to Watch">Plan</option>
-                            <option value="Watching">Watching</option>
-                            <option value="Completed">Done</option>
-                          </select>
-                        </div>
-                      )}
-
-                      <div style={{ marginTop: '6px', display: 'flex', gap: '4px' }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleWatchlist(movie);
-                          }}
+                        <select
+                          value={movie.userStatus || 'Plan to Watch'}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => updateStatus(movie.id, e.target.value)}
                           style={{
-                            flex: 1,
-                            padding: '5px 6px',
-                            borderRadius: '5px',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            background: isMovieInWatchlist(movie.imdbID)
-                              ? 'rgba(74, 222, 128, 0.15)'
-                              : 'rgba(255, 255, 255, 0.05)',
-                            color: isMovieInWatchlist(movie.imdbID) ? '#4ade80' : '#fff',
-                            fontWeight: 600,
-                            fontSize: '0.7rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '3px'
+                            background: '#0b0f19',
+                            color: '#38bdf8',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            borderRadius: '4px',
+                            padding: '1px 3px',
+                            fontSize: '0.62rem',
+                            outline: 'none'
                           }}
                         >
-                          {isMovieInWatchlist(movie.imdbID) ? (
-                            <>
-                              <Check size={12} /> Saved
-                            </>
-                          ) : (
-                            <>
-                              <Plus size={12} /> Add
-                            </>
-                          )}
-                        </button>
+                          <option value="Plan to Watch">Plan</option>
+                          <option value="Watching">Watching</option>
+                          <option value="Completed">Done</option>
+                        </select>
                       </div>
+                    )}
+
+                    <div style={{ marginTop: '6px', display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleWatchlist(movie);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '5px',
+                          borderRadius: '5px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          background: isMovieInWatchlist(movie?.id)
+                            ? 'rgba(74, 222, 128, 0.15)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                          color: isMovieInWatchlist(movie?.id) ? '#4ade80' : '#fff',
+                          fontWeight: 600,
+                          fontSize: '0.68rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '3px'
+                        }}
+                      >
+                        {isMovieInWatchlist(movie?.id) ? (
+                          <>
+                            <Check size={11} /> Saved
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={11} /> Add
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </section>
@@ -914,46 +902,42 @@ export default function App() {
       <footer
         style={{
           marginTop: 'auto',
-          padding: '16px',
+          padding: '14px',
           textAlign: 'center',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(11, 15, 25, 0.9)',
+          background: 'rgba(11, 15, 25, 0.95)',
           color: '#94a3b8',
-          fontSize: '0.8rem'
+          fontSize: '0.75rem'
         }}
       >
-        Project Developed by <strong style={{ color: '#38bdf8' }}>Anshu Maurya</strong> • TY BCA
+        Developed by <strong style={{ color: '#38bdf8' }}>Anshu Maurya</strong> (TY BCA)
       </footer>
 
-      {/* Robust Smart Trailer Modal Player */}
+      {/* Smart Official Trailer Modal */}
       {activeTrailer && (
-        <div 
-          className="modal-overlay" 
-          onClick={() => setActiveTrailer(null)}
-          style={{ zIndex: 140, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)' }}
-        >
+        <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
             style={{ 
               position: 'relative', 
-              width: '92%', 
-              maxWidth: '740px', 
+              width: '100%', 
+              maxWidth: '720px', 
               aspectRatio: activeTrailer.type === 'embed' ? '16/9' : 'auto', 
               background: '#0b0f19', 
-              borderRadius: '14px', 
+              borderRadius: '12px', 
               overflow: 'hidden',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.9)',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.9)',
               border: '1px solid rgba(56, 189, 248, 0.3)',
-              padding: activeTrailer.type === 'external' ? '28px 20px' : '0'
+              padding: activeTrailer.type === 'external' ? '24px 16px' : '0'
             }} 
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() => setActiveTrailer(null)}
+              onClick={closeModalsSafely}
               style={{
                 position: 'absolute',
-                top: '12px',
-                right: '12px',
-                background: 'rgba(255,255,255,0.1)',
+                top: '10px',
+                right: '10px',
+                background: 'rgba(0,0,0,0.7)',
                 border: 'none',
                 borderRadius: '50%',
                 width: '32px',
@@ -966,19 +950,19 @@ export default function App() {
                 zIndex: 20
               }}
             >
-              <X size={18} />
+              <X size={17} />
             </button>
 
             {activeTrailer.type === 'embed' ? (
               <iframe
-                src={`https://www.youtube.com/embed/${activeTrailer.videoId}?autoplay=1`}
+                src={`https://www.youtube.com/embed/${activeTrailer.videoId}?autoplay=1&rel=0`}
                 title={`${activeTrailer.title} Trailer`}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
             ) : (
-              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                 <img 
                   src={activeTrailer.poster} 
                   alt={activeTrailer.title} 
@@ -986,37 +970,37 @@ export default function App() {
                     e.target.onerror = null;
                     e.target.src = FALLBACK_POSTER;
                   }}
-                  style={{ width: '110px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.15)' }} 
+                  style={{ width: '100px', height: '140px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.15)' }} 
                 />
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', margin: '0 0 6px 0' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: '0 0 4px 0' }}>
                     {activeTrailer.title}
                   </h3>
-                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0, maxWidth: '420px' }}>
-                    Watch official trailer safely on YouTube without playback restrictions.
+                  <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0, maxWidth: '380px' }}>
+                    Official preview safely streaming on YouTube.
                   </p>
                 </div>
                 <button
                   onClick={() => {
-                    const query = encodeURIComponent(`${activeTrailer.title} ${activeTrailer.year || ''} official trailer`);
+                    const query = encodeURIComponent(`${activeTrailer.title} official trailer`);
                     window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank', 'noopener,noreferrer');
                   }}
                   style={{
                     background: '#ef4444',
                     color: '#fff',
                     border: 'none',
-                    padding: '12px 24px',
+                    padding: '10px 20px',
                     borderRadius: '8px',
                     fontWeight: 700,
-                    fontSize: '0.9rem',
+                    fontSize: '0.85rem',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '6px',
                     boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)'
                   }}
                 >
-                  <Play size={16} fill="#fff" /> Launch Official Trailer <ExternalLink size={15} />
+                  <Play size={15} fill="#fff" /> Launch Official Trailer <ExternalLink size={14} />
                 </button>
               </div>
             )}
@@ -1024,21 +1008,21 @@ export default function App() {
         </div>
       )}
 
-      {/* Details Popup Modal (with WHERE TO WATCH streaming section) */}
+      {/* Details Popup Modal */}
       {selectedMovie && !activeTrailer && (
-        <div className="modal-overlay" onClick={() => setSelectedMovie(null)}>
+        <div className="modal-overlay" onClick={closeModalsSafely}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={() => setSelectedMovie(null)}
+              onClick={closeModalsSafely}
               style={{
                 position: 'absolute',
-                top: '12px',
-                right: '12px',
-                background: 'rgba(255,255,255,0.1)',
+                top: '10px',
+                right: '10px',
+                background: 'rgba(255,255,255,0.15)',
                 border: 'none',
                 borderRadius: '50%',
-                width: '28px',
-                height: '28px',
+                width: '26px',
+                height: '26px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1047,13 +1031,13 @@ export default function App() {
                 zIndex: 10
               }}
             >
-              <X size={16} />
+              <X size={15} />
             </button>
 
             <div className="modal-body">
               <img
-                src={getValidPoster(selectedMovie.Poster, selectedMovie.Title)}
-                alt={selectedMovie.Title}
+                src={selectedMovie?.Poster || FALLBACK_POSTER}
+                alt={selectedMovie?.Title}
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = FALLBACK_POSTER;
@@ -1063,140 +1047,111 @@ export default function App() {
               />
 
               <div className="modal-details">
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <span
                     style={{
                       background: '#f5c518',
                       color: '#000',
                       fontWeight: 800,
-                      padding: '2px 8px',
+                      padding: '2px 6px',
                       borderRadius: '4px',
-                      fontSize: '0.8rem'
+                      fontSize: '0.72rem'
                     }}
                   >
-                    IMDb {selectedMovie.imdbRating || 'N/A'}
+                    TMDB {selectedMovie?.imdbRating}
                   </span>
-                  <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{selectedMovie.Year}</span>
-                  <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{selectedMovie.Runtime || '120 min'}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{selectedMovie?.Year}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{selectedMovie?.Runtime}</span>
                 </div>
 
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff' }}>{selectedMovie.Title}</h3>
-                <span style={{ color: '#38bdf8', fontSize: '0.8rem', fontWeight: 600 }}>
-                  {selectedMovie.Genre || 'Action, Drama'}
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>{selectedMovie?.Title}</h3>
+                <span style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 600 }}>
+                  {selectedMovie?.Genre}
                 </span>
 
-                <p style={{ color: '#cbd5e1', fontSize: '0.82rem', lineHeight: '1.4' }}>
-                  {selectedMovie.Plot && selectedMovie.Plot !== 'N/A'
-                    ? selectedMovie.Plot
-                    : 'No synopsis available.'}
+                <p style={{ color: '#cbd5e1', fontSize: '0.78rem', lineHeight: '1.4' }}>
+                  {selectedMovie?.Plot}
                 </p>
 
                 <div
                   style={{
-                    fontSize: '0.78rem',
+                    fontSize: '0.74rem',
                     color: '#94a3b8',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px'
+                    gap: '3px'
                   }}
                 >
                   <div>
-                    <strong style={{ color: '#e2e8f0' }}>Cast:</strong> {selectedMovie.Actors || 'N/A'}
+                    <strong style={{ color: '#e2e8f0' }}>Cast:</strong> {selectedMovie?.Actors}
                   </div>
                   <div>
-                    <strong style={{ color: '#e2e8f0' }}>Director:</strong> {selectedMovie.Director || 'N/A'}
+                    <strong style={{ color: '#e2e8f0' }}>Director:</strong> {selectedMovie?.Director}
                   </div>
                 </div>
 
-                {/* Where to Watch (Streaming Providers Section) */}
-                <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
-                    <Tv size={14} /> WHERE TO WATCH (STREAMING)
+                {/* Where to Watch */}
+                <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '6px' }}>
+                    <Tv size={13} /> STREAMING PROVIDERS
                   </div>
                   
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {STREAMING_PLATFORMS[selectedMovie.imdbID] ? (
-                      STREAMING_PLATFORMS[selectedMovie.imdbID].map((platform) => (
-                        <a
-                          key={platform.name}
-                          href={platform.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            background: platform.color,
-                            color: '#fff',
-                            textDecoration: 'none',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: 700
-                          }}
-                        >
-                          {platform.name} <ExternalLink size={11} />
-                        </a>
-                      ))
-                    ) : (
-                      <>
-                        <a
-                          href={`https://www.google.com/search?q=watch+${encodeURIComponent(selectedMovie.Title)}+online`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            background: '#2563eb',
-                            color: '#fff',
-                            textDecoration: 'none',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: 700
-                          }}
-                        >
-                          Find Streaming on Google <ExternalLink size={11} />
-                        </a>
-                        <a
-                          href={`https://www.justwatch.com/in/search?q=${encodeURIComponent(selectedMovie.Title)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            background: '#f59e0b',
-                            color: '#000',
-                            textDecoration: 'none',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: 700
-                          }}
-                        >
-                          JustWatch <ExternalLink size={11} />
-                        </a>
-                      </>
-                    )}
+                    <a
+                      href={`https://www.justwatch.com/in/search?q=${encodeURIComponent(selectedMovie?.Title || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#f59e0b',
+                        color: '#000',
+                        textDecoration: 'none',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      JustWatch <ExternalLink size={10} />
+                    </a>
+                    <a
+                      href={`https://www.google.com/search?q=watch+${encodeURIComponent(selectedMovie?.Title || '')}+online`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#2563eb',
+                        color: '#fff',
+                        textDecoration: 'none',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      Google Watch <ExternalLink size={10} />
+                    </a>
                   </div>
                 </div>
 
-                {/* Actions: Watchlist Toggle + Safe Trailer */}
-                <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {/* Actions */}
+                <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     onClick={() => toggleWatchlist(selectedMovie)}
                     className="btn-primary"
                     style={{ flex: 1, justifyContent: 'center' }}
                   >
-                    {isMovieInWatchlist(selectedMovie.imdbID) ? (
+                    {isMovieInWatchlist(selectedMovie?.id) ? (
                       <>
-                        <Check size={16} color="#4ade80" /> Remove from Watchlist
+                        <Check size={15} color="#4ade80" /> Remove Watchlist
                       </>
                     ) : (
                       <>
-                        <Plus size={16} /> Add to Watchlist
+                        <Plus size={15} /> Add to Watchlist
                       </>
                     )}
                   </button>
@@ -1204,20 +1159,20 @@ export default function App() {
                   <button
                     onClick={() => handlePlayTrailer(selectedMovie)}
                     style={{
-                      padding: '10px 16px',
+                      padding: '8px 14px',
                       borderRadius: '8px',
                       background: '#ef4444',
                       border: 'none',
                       color: '#ffffff',
                       fontWeight: 700,
-                      fontSize: '0.85rem',
+                      fontSize: '0.8rem',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '5px'
                     }}
                   >
-                    <Play size={15} fill="#ffffff" /> Watch Trailer
+                    <Play size={14} fill="#ffffff" /> Watch Trailer
                   </button>
                 </div>
               </div>

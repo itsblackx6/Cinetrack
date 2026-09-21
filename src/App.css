@@ -1,116 +1,169 @@
-/* Global Reset & Base Layout */
-* {
+/* Global Reset & Viewport Lock */
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+html {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   background-color: #0b0f19;
   color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  touch-action: manipulation;
 }
 
+/* Navbar */
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 20px;
-  background: rgba(11, 15, 25, 0.95);
+  padding: 12px 16px;
+  background: rgba(11, 15, 25, 0.96);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: sticky;
   top: 0;
   z-index: 100;
   backdrop-filter: blur(10px);
+  width: 100%;
 }
 
 .nav-brand {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #fff;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+.nav-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
-/* Hero Section */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 12px;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 20px;
+  }
+}
+
+/* Hero Billboard Section */
 .hero {
-  height: 380px;
+  height: 320px;
   background-size: cover;
   background-position: center;
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   position: relative;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 768px) {
+  .hero {
+    height: 380px;
+    border-radius: 18px;
+  }
 }
 
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, #0b0f19 5%, rgba(11, 15, 25, 0.6) 50%, rgba(11, 15, 25, 0.2) 100%);
+  background: linear-gradient(to top, #0b0f19 8%, rgba(11, 15, 25, 0.65) 55%, rgba(11, 15, 25, 0.25) 100%);
   display: flex;
   align-items: flex-end;
-  padding: 24px;
+  padding: 16px;
+}
+
+@media (min-width: 768px) {
+  .hero-overlay {
+    padding: 24px;
+  }
 }
 
 .hero-content {
-  max-width: 700px;
+  max-width: 720px;
+  width: 100%;
 }
 
 .hero-title {
-  font-size: 2rem;
+  font-size: 1.45rem;
   font-weight: 900;
   color: #fff;
   margin: 6px 0;
+  line-height: 1.2;
+}
+
+@media (min-width: 768px) {
+  .hero-title {
+    font-size: 2rem;
+  }
 }
 
 .hero-overview {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: #cbd5e1;
   margin-bottom: 12px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
+  line-height: 1.35;
 }
 
+/* Common Buttons */
 .btn-primary {
   background: #38bdf8;
   color: #0b0f19;
   border: none;
-  padding: 10px 18px;
+  padding: 9px 16px;
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  font-size: 0.9rem;
-  transition: background 0.2s;
+  font-size: 0.85rem;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
-.btn-primary:hover {
-  background: #0ea5e9;
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
 /* Search Wrapper */
 .search-wrapper {
   display: flex;
-  gap: 10px;
-  margin-bottom: 1.5rem;
+  gap: 8px;
+  margin-bottom: 1rem;
+  width: 100%;
 }
 
 .search-input-box {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 10px 14px;
+  padding: 9px 12px;
   border-radius: 10px;
 }
 
@@ -120,64 +173,64 @@ body {
   outline: none;
   color: #fff;
   width: 100%;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .section-title {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #fff;
-  margin-bottom: 1rem;
+  margin-bottom: 0.8rem;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Card Grid Layout - Mobile pe 2 columns (aaju-baju) */
+/* Card Grid Layout */
 .card-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 12px !important;
-  padding: 5px 0;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  width: 100%;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
-    gap: 20px !important;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+    gap: 16px !important;
   }
 }
 
-/* Movie Card Compact Styling */
+/* Movie Card */
 .movie-card {
   background: #151c2f;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: transform 0.2s ease, border-color 0.2s ease;
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .movie-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   border-color: rgba(56, 189, 248, 0.4);
 }
 
 .rating-badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   background: rgba(11, 15, 25, 0.85);
   backdrop-filter: blur(4px);
-  padding: 3px 6px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
+  gap: 3px;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #fff;
   z-index: 2;
@@ -185,8 +238,9 @@ body {
 
 .card-poster {
   width: 100%;
-  height: 160px;
+  height: 180px;
   object-fit: cover;
+  background: #1e293b;
 }
 
 @media (min-width: 768px) {
@@ -196,7 +250,7 @@ body {
 }
 
 .card-info {
-  padding: 10px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -204,7 +258,7 @@ body {
 }
 
 .card-title {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #fff;
   white-space: nowrap;
@@ -213,28 +267,31 @@ body {
   margin-bottom: 2px;
 }
 
-/* Modal Popup Styling */
+/* Modal Popup */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.82);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 12px;
   z-index: 1000;
+  width: 100vw;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 .modal-content {
   background: #111827;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  max-width: 700px;
+  border-radius: 14px;
+  max-width: 680px;
   width: 100%;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.7);
 }
 
 .modal-body {
@@ -252,21 +309,30 @@ body {
 
 .modal-poster {
   width: 100%;
-  height: 260px;
+  height: 220px;
   object-fit: cover;
 }
 
 @media (min-width: 640px) {
   .modal-poster {
-    width: 240px;
+    width: 230px;
     height: 360px;
   }
 }
 
 .modal-details {
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   flex: 1;
+}
+
+/* Hide Scrollbar for Horizontal Chips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
