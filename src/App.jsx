@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, Check, Star, Search, Film, X, Bookmark, 
-  GraduationCap, RefreshCw, Eye, AlertCircle, Play, 
+  RefreshCw, Eye, AlertCircle, Play, 
   Shuffle, CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Sparkles
+  ArrowUpDown, Tv, Flame, Sparkles, MonitorPlay, Radio
 } from 'lucide-react';
 import './App.css';
 
 const TMDB_API_KEY = '588ffc2c74b931292b25441fe86747cc';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
-const BACKDROP_BASE_URL = 'https://image.tmdb.org/t/p/original';
 
 const GENRE_MAP = {
   'Trending': 'trending',
@@ -26,7 +25,6 @@ const GENRE_MAP = {
 const GENRE_TAGS = ['Trending', 'Sci-Fi', 'Action', 'Adventure', 'Drama', 'Animation', 'Horror', 'Comedy'];
 
 const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop';
-const FALLBACK_BACKDROP = 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1200&auto=format&fit=crop';
 
 const INITIAL_POPULAR = [
   {
@@ -35,9 +33,8 @@ const INITIAL_POPULAR = [
     Year: "2014",
     imdbRating: "8.7",
     Poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-    backdrop: "https://image.tmdb.org/t/p/original/rAiYTua5ht9AcCQqqv6ZIG9qZmh.jpg",
     Plot: "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass human space travel limitations.",
-    Genre: "Adventure, Drama, Science Fiction",
+    Genre: "Adventure, Drama, Sci-Fi",
     Actors: "Matthew McConaughey, Anne Hathaway",
     Director: "Christopher Nolan",
     Runtime: "169 min"
@@ -48,7 +45,6 @@ const INITIAL_POPULAR = [
     Year: "2023",
     imdbRating: "8.9",
     Poster: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
-    backdrop: "https://image.tmdb.org/t/p/original/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg",
     Plot: "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
     Genre: "Drama, History",
     Actors: "Cillian Murphy, Emily Blunt",
@@ -61,8 +57,7 @@ const INITIAL_POPULAR = [
     Year: "2008",
     imdbRating: "9.0",
     Poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-    backdrop: "https://image.tmdb.org/t/p/original/nMKdUUepR0i5zn0y1T4CsSB5chy.jpg",
-    Plot: "Batman raises the stakes in his war on crime and sets out to dismantle the remaining criminal organizations that plague the streets.",
+    Plot: "Batman raises the stakes in his war on crime and sets out to dismantle the remaining criminal organizations.",
     Genre: "Action, Crime, Drama",
     Actors: "Christian Bale, Heath Ledger",
     Director: "Christopher Nolan",
@@ -72,24 +67,23 @@ const INITIAL_POPULAR = [
 
 export default function App() {
   const [movies, setMovies] = useState(INITIAL_POPULAR);
-  const [featuredIndex, setFeaturedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('Trending');
   const [sortBy, setSortBy] = useState('default');
   const [selectedMovie, setSelectedMovie] = useState(null);
-  const [activeTrailer, setActiveTrailer] = useState(null);
+  
+  // Streaming Player State
+  const [activePlayer, setActivePlayer] = useState(null); // { movie, mode: 'stream' | 'trailer', server: 1, trailerKey: null }
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [activeTab, setActiveTab] = useState('explore');
   const [watchlistFilter, setWatchlistFilter] = useState('All');
   const [toastMessage, setToastMessage] = useState(null);
 
-  const featuredMovie = movies[featuredIndex] || INITIAL_POPULAR[0];
-
-  // Crash-proof Watchlist
+  // Crash-proof Watchlist with LocalStorage
   const [watchlist, setWatchlist] = useState(() => {
     try {
-      const saved = localStorage.getItem('cinetracker_tmdb_watchlist');
+      const saved = localStorage.getItem('cinetrack_pro_watchlist');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -98,7 +92,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('cinetracker_tmdb_watchlist', JSON.stringify(watchlist));
+      localStorage.setItem('cinetrack_pro_watchlist', JSON.stringify(watchlist));
     } catch (err) {
       console.error("Storage write failed:", err);
     }
@@ -110,8 +104,8 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       pushedHistoryRef.current = false;
-      if (activeTrailer) {
-        setActiveTrailer(null);
+      if (activePlayer) {
+        setActivePlayer(null);
       } else if (selectedMovie) {
         setSelectedMovie(null);
       } else if (activeTab === 'watchlist') {
@@ -119,7 +113,7 @@ export default function App() {
       }
     };
 
-    if (activeTrailer || selectedMovie || activeTab === 'watchlist') {
+    if (activePlayer || selectedMovie || activeTab === 'watchlist') {
       window.history.pushState({ modalOrTab: true }, '');
       pushedHistoryRef.current = true;
     }
@@ -128,20 +122,20 @@ export default function App() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [activeTrailer, selectedMovie, activeTab]);
+  }, [activePlayer, selectedMovie, activeTab]);
 
   const closeModalsSafely = () => {
     if (pushedHistoryRef.current) {
       window.history.back();
     } else {
-      setActiveTrailer(null);
+      setActivePlayer(null);
       setSelectedMovie(null);
     }
   };
 
   // Scroll lock & Escape key
   useEffect(() => {
-    if (selectedMovie || activeTrailer) {
+    if (selectedMovie || activePlayer) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -156,7 +150,7 @@ export default function App() {
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedMovie, activeTrailer]);
+  }, [selectedMovie, activePlayer]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -165,36 +159,31 @@ export default function App() {
     }, 2400);
   };
 
-  const handleNextHero = () => {
-    setFeaturedIndex((prev) => (prev + 1) % (movies.length > 5 ? 5 : movies.length));
-  };
-
   // Formatter
   const formatTmdbMovie = (item) => ({
     id: item.id,
-    Title: item.title || item.original_title || 'Untitled Movie',
-    Year: item.release_date ? item.release_date.split('-')[0] : '2024',
+    Title: item.title || item.original_title || 'Untitled Cinema',
+    Year: item.release_date ? item.release_date.split('-')[0] : '2025',
     imdbRating: item.vote_average ? item.vote_average.toFixed(1) : '7.5',
     Poster: item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : FALLBACK_POSTER,
-    backdrop: item.backdrop_path ? `${BACKDROP_BASE_URL}${item.backdrop_path}` : FALLBACK_BACKDROP,
     Plot: item.overview || 'No synopsis provided.',
-    Genre: 'Cinema',
+    Genre: 'Featured Cinema',
     Actors: 'Featured Cast',
     Director: 'Director',
     Runtime: '120 min'
   });
 
-  // Initial Trending Fetch
+  // Initial Fetch
   useEffect(() => {
     const fetchInitial = async () => {
       try {
         const res = await fetch(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`);
         const data = await res.json();
         if (data && data.results && data.results.length > 0) {
-          setMovies(data.results.slice(0, 18).map(formatTmdbMovie));
+          setMovies(data.results.slice(0, 20).map(formatTmdbMovie));
         }
       } catch (err) {
-        console.warn("Fallback mode:", err);
+        console.warn("Using offline safe data:", err);
       }
     };
     fetchInitial();
@@ -224,9 +213,9 @@ export default function App() {
         setMovies(INITIAL_POPULAR);
         setErrorMessage(`No titles found matching "${searchQuery}". Showing popular cinema.`);
       }
-    } catch (err) {
+    } catch {
       setMovies(INITIAL_POPULAR);
-      setErrorMessage("Network issue detected. Running in offline safety mode.");
+      setErrorMessage("Network issue detected. Running in safety mode.");
     } finally {
       setIsLoading(false);
     }
@@ -247,7 +236,7 @@ export default function App() {
       const res = await fetch(endpoint);
       const data = await res.json();
       if (data && data.results) {
-        setMovies(data.results.slice(0, 18).map(formatTmdbMovie));
+        setMovies(data.results.slice(0, 20).map(formatTmdbMovie));
       }
     } catch {
       setMovies(INITIAL_POPULAR);
@@ -283,25 +272,30 @@ export default function App() {
         }));
       }
     } catch (e) {
-      console.warn("Details fetch error:", e);
+      console.warn("Details fetch fallback:", e);
     }
   };
 
-  // TMDB Real YouTube Trailer Fetch
-  const handlePlayTrailer = async (movie) => {
+  // Launch Watch Player (Embed or Trailer)
+  const launchPlayer = async (movie, initialMode = 'stream') => {
+    let trailerKey = null;
     try {
       const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}`);
       const data = await res.json();
       const trailer = data?.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
-
-      if (trailer && trailer.key) {
-        setActiveTrailer({ type: 'embed', videoId: trailer.key, title: movie.Title });
-      } else {
-        setActiveTrailer({ type: 'external', title: movie.Title, year: movie.Year, poster: movie.Poster });
+      if (trailer?.key) {
+        trailerKey = trailer.key;
       }
     } catch {
-      setActiveTrailer({ type: 'external', title: movie.Title, year: movie.Year, poster: movie.Poster });
+      trailerKey = null;
     }
+
+    setActivePlayer({
+      movie,
+      mode: initialMode,
+      server: 1,
+      trailerKey
+    });
   };
 
   const toggleWatchlist = (movie) => {
@@ -336,11 +330,11 @@ export default function App() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(watchlist, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `cinetrack_tmdb_watchlist_${Date.now()}.json`);
+    downloadAnchor.setAttribute("download", `cinetrack_export_${Date.now()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    showToast("Watchlist backup downloaded!");
+    showToast("Watchlist downloaded!");
   };
 
   const stats = useMemo(() => {
@@ -365,8 +359,22 @@ export default function App() {
     return list;
   }, [activeTab, movies, watchlist, watchlistFilter, sortBy]);
 
+  // Streaming Embed URL Generator
+  const getStreamUrl = (movieId, serverNum) => {
+    switch (serverNum) {
+      case 1:
+        return `https://vidsrc.icu/embed/movie/${movieId}`;
+      case 2:
+        return `https://vidsrc.cc/v2/embed/movie/${movieId}`;
+      case 3:
+        return `https://multiembed.mov/?video_id=${movieId}&tmdb=1`;
+      default:
+        return `https://vidsrc.icu/embed/movie/${movieId}`;
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: '#0b0f19', color: '#f8fafc' }}>
+    <div style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: '#070b13', color: '#f8fafc' }}>
       
       {/* Toast Alert */}
       {toastMessage && (
@@ -379,7 +387,7 @@ export default function App() {
           border: '1px solid #38bdf8',
           boxShadow: '0 8px 24px rgba(56, 189, 248, 0.25)',
           color: '#f8fafc',
-          padding: '8px 16px',
+          padding: '8px 18px',
           borderRadius: '24px',
           zIndex: 1200,
           fontSize: '0.8rem',
@@ -394,14 +402,20 @@ export default function App() {
         </div>
       )}
 
-      {/* Top Navbar */}
-      <header className="navbar">
-        <div className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Film size={20} color="#38bdf8" />
-          <span>CineTracker</span>
+      {/* Sleek Top Navbar */}
+      <header className="navbar" style={{ padding: '12px 18px', background: 'rgba(7, 11, 19, 0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div 
+          className="nav-brand" 
+          onClick={() => { setActiveTab('explore'); clearSearch(); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+        >
+          <Film size={22} color="#38bdf8" />
+          <span style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '-0.5px', background: 'linear-gradient(90deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            CineTrack
+          </span>
         </div>
 
-        <div className="nav-actions">
+        <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
             onClick={() => {
               setActiveTab('explore');
@@ -413,175 +427,147 @@ export default function App() {
               color: activeTab === 'explore' ? '#38bdf8' : '#94a3b8',
               fontWeight: 700,
               cursor: 'pointer',
-              fontSize: '0.8rem',
-              padding: '4px'
+              fontSize: '0.85rem',
+              padding: '6px 8px'
             }}
           >
             Explore
           </button>
+
           <button
             onClick={() => setActiveTab('watchlist')}
             style={{
-              background: 'transparent',
-              border: 'none',
-              color: activeTab === 'watchlist' ? '#38bdf8' : '#94a3b8',
+              background: 'rgba(56, 189, 248, 0.1)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              borderRadius: '20px',
+              color: activeTab === 'watchlist' ? '#38bdf8' : '#cbd5e1',
               fontWeight: 700,
               cursor: 'pointer',
               fontSize: '0.8rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              padding: '4px'
+              gap: '6px',
+              padding: '5px 12px'
             }}
           >
             <Bookmark size={13} />
             Watchlist ({watchlist.length})
           </button>
-
-          {/* Student Persona Credit */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              background: 'rgba(56, 189, 248, 0.12)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              padding: '4px 8px',
-              borderRadius: '20px',
-              fontSize: '0.68rem',
-              color: '#7dd3fc',
-              fontWeight: 600,
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <GraduationCap size={12} color="#38bdf8" />
-            <span>Anshu Maurya • TY BCA</span>
-          </div>
         </div>
       </header>
 
-      <main className="container" style={{ flex: 1 }}>
-        {/* Billboard Hero Section */}
+      <main className="container" style={{ flex: 1, padding: '0 16px' }}>
+        
+        {/* Neon Hero Section (Replacing big resident evil banner) */}
         {activeTab === 'explore' && !searchQuery && (
-          <section
-            className="hero"
-            style={{
-              backgroundImage: `url(${featuredMovie.backdrop})`
-            }}
-          >
-            <div className="hero-overlay">
-              <div className="hero-content">
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span
-                    style={{
-                      background: '#f5c518',
-                      color: '#000',
-                      fontWeight: 800,
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      fontSize: '0.72rem'
-                    }}
-                  >
-                    TMDB {featuredMovie.imdbRating}
-                  </span>
-                  <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem' }}>
-                    {featuredMovie.Year}
-                  </span>
-                  <span style={{ background: 'rgba(56,189,248,0.2)', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    <Sparkles size={11} /> Featured
-                  </span>
-                </div>
+          <section style={{
+            textAlign: 'center',
+            padding: '36px 12px 24px 12px',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {/* Glowing Neon Backdrop Effect */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '260px',
+              height: '90px',
+              background: 'radial-gradient(ellipse at center, rgba(56, 189, 248, 0.35) 0%, rgba(129, 140, 248, 0.1) 70%, transparent 100%)',
+              filter: 'blur(35px)',
+              pointerEvents: 'none',
+              zIndex: 0
+            }} />
 
-                <h1 className="hero-title">{featuredMovie.Title}</h1>
-                <p className="hero-overview">{featuredMovie.Plot}</p>
+            {/* Neon Title */}
+            <h1 style={{
+              fontSize: 'clamp(2.4rem, 7vw, 3.8rem)',
+              fontWeight: 900,
+              letterSpacing: '-1.5px',
+              margin: '0 0 8px 0',
+              color: '#ffffff',
+              textShadow: '0 0 25px rgba(56, 189, 248, 0.65), 0 0 50px rgba(56, 189, 248, 0.3)',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              Cine<span style={{ color: '#38bdf8' }}>Track</span>
+            </h1>
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                  <button className="btn-primary" onClick={() => openMovieDetails(featuredMovie)}>
-                    <Eye size={15} /> View Details
-                  </button>
-                  <button
-                    onClick={() => toggleWatchlist(featuredMovie)}
-                    style={{
-                      padding: '9px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      backdropFilter: 'blur(8px)',
-                      color: '#fff',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.82rem'
-                    }}
-                  >
-                    {isMovieInWatchlist(featuredMovie.id) ? (
-                      <>
-                        <Check size={15} color="#4ade80" /> Saved
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={15} /> Add Watchlist
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleNextHero}
-                    title="Next Highlight"
-                    style={{
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      color: '#94a3b8',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '0.78rem'
-                    }}
-                  >
-                    <Shuffle size={13} /> Next
-                  </button>
-                </div>
-              </div>
-            </div>
+            <p style={{
+              color: '#94a3b8',
+              fontSize: '0.9rem',
+              maxWidth: '460px',
+              margin: '0 0 18px 0',
+              lineHeight: '1.4',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              Discover real-time trending cinema, watch official trailers, and stream seamless high-performance playback.
+            </p>
+
+            {/* Quick Watch Highlight Button */}
+            {movies.length > 0 && (
+              <button
+                onClick={() => launchPlayer(movies[0], 'stream')}
+                style={{
+                  background: 'linear-gradient(135deg, #0284c7, #2563eb)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '9px 20px',
+                  borderRadius: '30px',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 20px rgba(37, 99, 235, 0.45)',
+                  position: 'relative',
+                  zIndex: 1
+                }}
+              >
+                <Play size={16} fill="#ffffff" /> Watch Spotlight ({movies[0].Title})
+              </button>
+            )}
           </section>
         )}
 
         {/* Watchlist Quick Stats */}
         {activeTab === 'watchlist' && (
           <div style={{
-            marginTop: '0.5rem',
+            marginTop: '1rem',
             marginBottom: '1rem',
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: '8px',
-            background: 'rgba(21, 28, 47, 0.6)',
-            padding: '10px',
-            borderRadius: '10px',
+            background: 'rgba(15, 23, 42, 0.6)',
+            padding: '12px',
+            borderRadius: '12px',
             border: '1px solid rgba(255,255,255,0.06)'
           }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Saved</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#38bdf8' }}>{stats.total}</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>{stats.total}</div>
             </div>
             <div style={{ textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.08)', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Done</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#4ade80' }}>{stats.completed}</div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Completed</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#4ade80' }}>{stats.completed}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Avg Rating</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f5c518' }}>{stats.avgRating}</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f5c518' }}>{stats.avgRating}</div>
             </div>
           </div>
         )}
 
         {/* Search Bar */}
         {activeTab === 'explore' && (
-          <form onSubmit={handleSearch} className="search-wrapper">
-            <div className="search-input-box">
+          <form onSubmit={handleSearch} className="search-wrapper" style={{ margin: '8px 0 16px 0' }}>
+            <div className="search-input-box" style={{ background: '#0f172a', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
               <Search size={16} color="#38bdf8" />
               <input
                 type="text"
@@ -599,7 +585,7 @@ export default function App() {
                 </button>
               )}
             </div>
-            <button type="submit" className="btn-primary">
+            <button type="submit" className="btn-primary" style={{ background: '#0284c7' }}>
               {isLoading ? '...' : 'Search'}
             </button>
           </form>
@@ -607,20 +593,20 @@ export default function App() {
 
         {/* Genre Chips & Sort Row */}
         {activeTab === 'explore' && (
-          <div style={{ margin: '0.6rem 0 1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div className="no-scrollbar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', flex: 1 }}>
+          <div style={{ margin: '0 0 1.2rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="no-scrollbar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', flex: 1, paddingBottom: '4px' }}>
               {GENRE_TAGS.map((genre) => (
                 <button
                   key={genre}
                   onClick={() => handleGenreChange(genre)}
                   style={{
-                    padding: '4px 10px',
-                    borderRadius: '16px',
+                    padding: '5px 12px',
+                    borderRadius: '20px',
                     border: selectedGenre === genre ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
-                    background: selectedGenre === genre ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                    background: selectedGenre === genre ? 'rgba(56, 189, 248, 0.18)' : 'rgba(255, 255, 255, 0.03)',
                     color: selectedGenre === genre ? '#38bdf8' : '#94a3b8',
                     fontWeight: selectedGenre === genre ? 700 : 500,
-                    fontSize: '0.72rem',
+                    fontSize: '0.74rem',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap'
                   }}
@@ -636,11 +622,11 @@ export default function App() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 style={{
-                  background: '#151c2f',
+                  background: '#0f172a',
                   color: '#38bdf8',
                   border: '1px solid rgba(56, 189, 248, 0.3)',
                   borderRadius: '6px',
-                  padding: '3px 6px',
+                  padding: '4px 8px',
                   fontSize: '0.72rem',
                   outline: 'none',
                   cursor: 'pointer'
@@ -674,7 +660,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Watchlist Filter Buttons */}
+        {/* Watchlist Filters & Tools */}
         {activeTab === 'watchlist' && (
           <div style={{ margin: '0.8rem 0 1.2rem 0', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -687,7 +673,7 @@ export default function App() {
                     borderRadius: '16px',
                     border: watchlistFilter === status ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
                     background: watchlistFilter === status ? '#38bdf8' : 'rgba(255, 255, 255, 0.05)',
-                    color: watchlistFilter === status ? '#0b0f19' : '#cbd5e1',
+                    color: watchlistFilter === status ? '#070b13' : '#cbd5e1',
                     fontWeight: 600,
                     fontSize: '0.72rem',
                     cursor: 'pointer'
@@ -748,7 +734,7 @@ export default function App() {
 
         {/* Movies Grid */}
         <section>
-          <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 14px 0', fontSize: '1.05rem', fontWeight: 800 }}>
             {selectedGenre === 'Trending' ? <Flame size={18} color="#f97316" /> : <Film size={18} color="#38bdf8" />}
             {activeTab === 'explore'
               ? searchQuery
@@ -801,6 +787,7 @@ export default function App() {
                   <img
                     src={movie?.Poster || FALLBACK_POSTER}
                     alt={movie?.Title || 'Movie'}
+                    loading="lazy"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = FALLBACK_POSTER;
@@ -815,11 +802,37 @@ export default function App() {
                         {movie?.Title}
                       </div>
                       <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '1px' }}>
-                        {movie?.Year || '2024'} • TMDB VERIFIED
+                        {movie?.Year || '2025'} • TMDB VERIFIED
                       </div>
                     </div>
 
-                    {/* Watchlist Tools */}
+                    {/* Quick Watch Now Button inside Card */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        launchPlayer(movie, 'stream');
+                      }}
+                      style={{
+                        marginTop: '6px',
+                        width: '100%',
+                        padding: '6px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: 'linear-gradient(90deg, #0284c7, #2563eb)',
+                        color: '#fff',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Play size={11} fill="#ffffff" /> WATCH NOW
+                    </button>
+
+                    {/* Watchlist Tools if activeTab === watchlist */}
                     {activeTab === 'watchlist' && (
                       <div style={{ margin: '6px 0 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
@@ -839,7 +852,7 @@ export default function App() {
                           onClick={(e) => e.stopPropagation()}
                           onChange={(e) => updateStatus(movie.id, e.target.value)}
                           style={{
-                            background: '#0b0f19',
+                            background: '#070b13',
                             color: '#38bdf8',
                             border: '1px solid rgba(56, 189, 248, 0.3)',
                             borderRadius: '4px',
@@ -855,7 +868,7 @@ export default function App() {
                       </div>
                     )}
 
-                    <div style={{ marginTop: '6px', display: 'flex', gap: '4px' }}>
+                    <div style={{ marginTop: '5px', display: 'flex', gap: '4px' }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -885,7 +898,7 @@ export default function App() {
                           </>
                         ) : (
                           <>
-                            <Plus size={11} /> Add
+                            <Plus size={11} /> Watchlist
                           </>
                         )}
                       </button>
@@ -898,118 +911,177 @@ export default function App() {
         </section>
       </main>
 
-      {/* Footer */}
+      {/* Modern Footer Branding */}
       <footer
         style={{
           marginTop: 'auto',
-          padding: '14px',
+          padding: '18px 12px',
           textAlign: 'center',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(11, 15, 25, 0.95)',
-          color: '#94a3b8',
-          fontSize: '0.75rem'
+          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+          background: 'rgba(7, 11, 19, 0.98)',
+          color: '#64748b',
+          fontSize: '0.78rem'
         }}
       >
-        Developed by <strong style={{ color: '#38bdf8' }}>Anshu Maurya</strong> (TY BCA)
+        Crafted with <span style={{ color: '#38bdf8' }}>⚡</span> by <strong style={{ color: '#f8fafc', letterSpacing: '0.5px' }}>Lord Black</strong>
       </footer>
 
-      {/* Smart Official Trailer Modal */}
-      {activeTrailer && (
+      {/* Advanced Multi-Server Streaming Video Player Modal */}
+      {activePlayer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
             style={{ 
               position: 'relative', 
               width: '100%', 
-              maxWidth: '720px', 
-              aspectRatio: activeTrailer.type === 'embed' ? '16/9' : 'auto', 
-              background: '#0b0f19', 
-              borderRadius: '12px', 
+              maxWidth: '860px', 
+              background: '#070b13', 
+              borderRadius: '14px', 
               overflow: 'hidden',
-              boxShadow: '0 25px 50px rgba(0,0,0,0.9)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              padding: activeTrailer.type === 'external' ? '24px 16px' : '0'
+              boxShadow: '0 25px 50px rgba(0,0,0,0.95)',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              display: 'flex',
+              flexDirection: 'column'
             }} 
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={closeModalsSafely}
-              style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                background: 'rgba(0,0,0,0.7)',
-                border: 'none',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                cursor: 'pointer',
-                zIndex: 20
-              }}
-            >
-              <X size={17} />
-            </button>
+            {/* Player Header Controls */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 14px',
+              background: '#0f172a',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              flexWrap: 'wrap',
+              gap: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MonitorPlay size={18} color="#38bdf8" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f8fafc' }}>
+                  {activePlayer.movie.Title}
+                </span>
+              </div>
 
-            {activeTrailer.type === 'embed' ? (
-              <iframe
-                src={`https://www.youtube.com/embed/${activeTrailer.videoId}?autoplay=1&rel=0`}
-                title={`${activeTrailer.title} Trailer`}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                <img 
-                  src={activeTrailer.poster} 
-                  alt={activeTrailer.title} 
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = FALLBACK_POSTER;
-                  }}
-                  style={{ width: '100px', height: '140px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.15)' }} 
-                />
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: '0 0 4px 0' }}>
-                    {activeTrailer.title}
-                  </h3>
-                  <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0, maxWidth: '380px' }}>
-                    Official preview safely streaming on YouTube.
-                  </p>
-                </div>
+              {/* Mode & Server Selector Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <button
-                  onClick={() => {
-                    const query = encodeURIComponent(`${activeTrailer.title} official trailer`);
-                    window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank', 'noopener,noreferrer');
-                  }}
+                  onClick={() => setActivePlayer(prev => ({ ...prev, mode: 'stream', server: 1 }))}
                   style={{
-                    background: '#ef4444',
-                    color: '#fff',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
                     border: 'none',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
+                    background: activePlayer.mode === 'stream' && activePlayer.server === 1 ? '#0284c7' : 'rgba(255,255,255,0.08)',
+                    color: '#fff',
+                    fontSize: '0.7rem',
                     fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)'
+                    cursor: 'pointer'
                   }}
                 >
-                  <Play size={15} fill="#fff" /> Launch Official Trailer <ExternalLink size={14} />
+                  Server 1
+                </button>
+                <button
+                  onClick={() => setActivePlayer(prev => ({ ...prev, mode: 'stream', server: 2 }))}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: activePlayer.mode === 'stream' && activePlayer.server === 2 ? '#0284c7' : 'rgba(255,255,255,0.08)',
+                    color: '#fff',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Server 2
+                </button>
+                <button
+                  onClick={() => setActivePlayer(prev => ({ ...prev, mode: 'stream', server: 3 }))}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: activePlayer.mode === 'stream' && activePlayer.server === 3 ? '#0284c7' : 'rgba(255,255,255,0.08)',
+                    color: '#fff',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Server 3
+                </button>
+
+                {activePlayer.trailerKey && (
+                  <button
+                    onClick={() => setActivePlayer(prev => ({ ...prev, mode: 'trailer' }))}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: activePlayer.mode === 'trailer' ? '#ef4444' : 'rgba(255,255,255,0.08)',
+                      color: '#fff',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Trailer
+                  </button>
+                )}
+
+                <button
+                  onClick={closeModalsSafely}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '26px',
+                    height: '26px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    marginLeft: '4px'
+                  }}
+                >
+                  <X size={15} />
                 </button>
               </div>
-            )}
+            </div>
+
+            {/* Video Canvas */}
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000' }}>
+              {activePlayer.mode === 'stream' ? (
+                <iframe
+                  key={`${activePlayer.movie.id}-server-${activePlayer.server}`}
+                  src={getStreamUrl(activePlayer.movie.id, activePlayer.server)}
+                  title={`${activePlayer.movie.Title} Stream`}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  allowFullScreen
+                />
+              ) : (
+                <iframe
+                  src={`https://www.youtube.com/embed/${activePlayer.trailerKey}?autoplay=1&rel=0`}
+                  title={`${activePlayer.movie.Title} Official Trailer`}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
+            </div>
+
+            {/* Server notice under player */}
+            <div style={{ padding: '6px 12px', background: '#0b1120', fontSize: '0.68rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Streaming via Fast Edge Embeds • If a server is buffering, switch servers above.</span>
+              <span style={{ color: '#38bdf8' }}>HD Mode</span>
+            </div>
           </div>
         </div>
       )}
 
       {/* Details Popup Modal */}
-      {selectedMovie && !activeTrailer && (
+      {selectedMovie && !activePlayer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <button
@@ -1064,7 +1136,7 @@ export default function App() {
                   <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{selectedMovie?.Runtime}</span>
                 </div>
 
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>{selectedMovie?.Title}</h3>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>{selectedMovie?.Title}</h3>
                 <span style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 600 }}>
                   {selectedMovie?.Genre}
                 </span>
@@ -1093,7 +1165,7 @@ export default function App() {
                 {/* Where to Watch */}
                 <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '6px' }}>
-                    <Tv size={13} /> STREAMING PROVIDERS
+                    <Tv size={13} /> OFFICIAL DISCOVERY
                   </div>
                   
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -1133,7 +1205,7 @@ export default function App() {
                         fontWeight: 700
                       }}
                     >
-                      Google Watch <ExternalLink size={10} />
+                      Google Search <ExternalLink size={10} />
                     </a>
                   </div>
                 </div>
@@ -1141,38 +1213,40 @@ export default function App() {
                 {/* Actions */}
                 <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
-                    onClick={() => toggleWatchlist(selectedMovie)}
-                    className="btn-primary"
-                    style={{ flex: 1, justifyContent: 'center' }}
-                  >
-                    {isMovieInWatchlist(selectedMovie?.id) ? (
-                      <>
-                        <Check size={15} color="#4ade80" /> Remove Watchlist
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={15} /> Add to Watchlist
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => handlePlayTrailer(selectedMovie)}
+                    onClick={() => launchPlayer(selectedMovie, 'stream')}
                     style={{
-                      padding: '8px 14px',
+                      flex: 1,
+                      padding: '9px 12px',
                       borderRadius: '8px',
-                      background: '#ef4444',
+                      background: 'linear-gradient(90deg, #0284c7, #2563eb)',
                       border: 'none',
                       color: '#ffffff',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       fontSize: '0.8rem',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: 'center',
                       gap: '5px'
                     }}
                   >
-                    <Play size={14} fill="#ffffff" /> Watch Trailer
+                    <Play size={14} fill="#ffffff" /> Stream Cinema
+                  </button>
+
+                  <button
+                    onClick={() => toggleWatchlist(selectedMovie)}
+                    className="btn-primary"
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                  >
+                    {isMovieInWatchlist(selectedMovie?.id) ? (
+                      <>
+                        <Check size={14} color="#4ade80" /> Saved
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={14} /> Watchlist
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
