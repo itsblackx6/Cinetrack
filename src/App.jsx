@@ -3,11 +3,10 @@ import {
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, Eye, AlertCircle, Play, 
   CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Sparkles, Share2, Award, Clapperboard
+  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard
 } from 'lucide-react';
 import './App.css';
 
-// Safe TMDB fallback
 const TMDB_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TMDB_API_KEY) 
   ? import.meta.env.VITE_TMDB_API_KEY 
   : '588ffc2c74b931292b25441fe86747cc';
@@ -15,8 +14,7 @@ const TMDB_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env && i
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
-// Ultra-lightweight crash-proof SVG placeholder
-const SVG_POSTER_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22500%22%20height%3D%22750%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20500%20750%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23111827%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%2338bdf8%22%20font-family%3D%22sans-serif%22%20font-size%3D%2224%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20dy%3D%22.3em%22%3ECineTrack%3C%2Ftext%3E%3C%2Fsvg%3E";
+const SVG_POSTER_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22500%22%20height%3D%22750%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20500%20750%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23111827%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%2338bdf8%22%20font-family%3D%22sans-serif%22%20font-size%3D%2224%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%3ECineTrack%3C%2Ftext%3E%3C%2Fsvg%3E";
 
 const GENRE_MAP = {
   'Trending': 'trending',
@@ -31,6 +29,7 @@ const GENRE_MAP = {
 
 const GENRE_TAGS = ['Trending', 'Sci-Fi', 'Action', 'Adventure', 'Drama', 'Animation', 'Horror', 'Comedy'];
 
+// Full 10-Item Fallback Catalog so desktop never looks empty
 const INITIAL_POPULAR = [
   {
     id: 157336,
@@ -38,7 +37,7 @@ const INITIAL_POPULAR = [
     Year: "2014",
     imdbRating: "8.7",
     Poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-    Plot: "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass human space travel limitations.",
+    Plot: "The adventures of a group of explorers who make use of a wormhole to surpass human space travel limitations.",
     Genre: "Adventure, Drama, Sci-Fi",
     Actors: "Matthew McConaughey, Anne Hathaway",
     Director: "Christopher Nolan",
@@ -62,11 +61,95 @@ const INITIAL_POPULAR = [
     Year: "2008",
     imdbRating: "9.0",
     Poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-    Plot: "Batman raises the stakes in his war on crime and sets out to dismantle the remaining criminal organizations that plague the streets.",
+    Plot: "Batman raises the stakes in his war on crime and sets out to dismantle the remaining criminal organizations.",
     Genre: "Action, Crime, Drama",
     Actors: "Christian Bale, Heath Ledger",
     Director: "Christopher Nolan",
     Runtime: "152 min"
+  },
+  {
+    id: 693134,
+    Title: "Dune: Part Two",
+    Year: "2024",
+    imdbRating: "8.6",
+    Poster: "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
+    Plot: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.",
+    Genre: "Sci-Fi, Adventure",
+    Actors: "Timothée Chalamet, Zendaya",
+    Director: "Denis Villeneuve",
+    Runtime: "166 min"
+  },
+  {
+    id: 27205,
+    Title: "Inception",
+    Year: "2010",
+    imdbRating: "8.8",
+    Poster: "https://image.tmdb.org/t/p/w500/ljsZTbVsrQSqZgWeep2B1QiDKuh.jpg",
+    Plot: "A thief who steals corporate secrets through dream-sharing technology is given the task of planting an idea into a CEO's mind.",
+    Genre: "Action, Sci-Fi, Adventure",
+    Actors: "Leonardo DiCaprio, Joseph Gordon-Levitt",
+    Director: "Christopher Nolan",
+    Runtime: "148 min"
+  },
+  {
+    id: 299536,
+    Title: "Avengers: Infinity War",
+    Year: "2018",
+    imdbRating: "8.4",
+    Poster: "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
+    Plot: "The Avengers and their allies must be willing to sacrifice all in an attempt to defeat the powerful Thanos.",
+    Genre: "Action, Adventure, Sci-Fi",
+    Actors: "Robert Downey Jr., Chris Hemsworth",
+    Director: "Anthony Russo, Joe Russo",
+    Runtime: "149 min"
+  },
+  {
+    id: 569094,
+    Title: "Spider-Man: Across the Spider-Verse",
+    Year: "2023",
+    imdbRating: "8.7",
+    Poster: "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+    Plot: "Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its existence.",
+    Genre: "Animation, Action, Adventure",
+    Actors: "Shameik Moore, Hailee Steinfeld",
+    Director: "Joaquim Dos Santos",
+    Runtime: "140 min"
+  },
+  {
+    id: 424,
+    Title: "Schindler's List",
+    Year: "1993",
+    imdbRating: "9.0",
+    Poster: "https://image.tmdb.org/t/p/w500/sF1U4EUQS8YHUYjNlvt0phAhwuc.jpg",
+    Plot: "In German-occupied Poland during World War II, industrialist Oskar Schindler gradually becomes concerned for his Jewish workforce.",
+    Genre: "Drama, History",
+    Actors: "Liam Neeson, Ben Kingsley",
+    Director: "Steven Spielberg",
+    Runtime: "195 min"
+  },
+  {
+    id: 19995,
+    Title: "Avatar",
+    Year: "2009",
+    imdbRating: "7.9",
+    Poster: "https://image.tmdb.org/t/p/w500/kyeqWdyUXW608qlYkRqosgbbJyK.jpg",
+    Plot: "A paraplegic Marine dispatched to the moon Pandora on a unique mission becomes torn between following orders and protecting an alien civilization.",
+    Genre: "Action, Adventure, Fantasy",
+    Actors: "Sam Worthington, Zoe Saldana",
+    Director: "James Cameron",
+    Runtime: "162 min"
+  },
+  {
+    id: 98,
+    Title: "Gladiator",
+    Year: "2000",
+    imdbRating: "8.5",
+    Poster: "https://image.tmdb.org/t/p/w500/ty8TGRuvJLPUmAR1H1nRIsgwvim.jpg",
+    Plot: "A former Roman General sets out to exact vengeance against the corrupt emperor who murdered his family and sent him into slavery.",
+    Genre: "Action, Drama, Adventure",
+    Actors: "Russell Crowe, Joaquin Phoenix",
+    Director: "Ridley Scott",
+    Runtime: "155 min"
   }
 ];
 
@@ -77,17 +160,16 @@ export default function App() {
   const [sortBy, setSortBy] = useState('default');
   const [filterTopRatedOnly, setFilterTopRatedOnly] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState(null);
-  const [activeTrailer, setActiveTrailer] = useState(null); // { videoId, title, fallbackQuery }
+  const [activeTrailer, setActiveTrailer] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [activeTab, setActiveTab] = useState('explore');
   const [watchlistFilter, setWatchlistFilter] = useState('All');
   const [toastMessage, setToastMessage] = useState(null);
 
-  // In-Memory API Cache to save network and prevent rate limits
   const cacheRef = useRef({});
 
-  // Crash-proof Sanitize Storage Engine
+  // LocalStorage Engine
   const [watchlist, setWatchlist] = useState(() => {
     try {
       const saved = localStorage.getItem('cinetrack_pro_v2_watchlist');
@@ -99,7 +181,6 @@ export default function App() {
 
   useEffect(() => {
     try {
-      // Sanitize payload to prevent LocalStorage quota overflow
       const cleanList = watchlist.slice(0, 100).map(m => ({
         id: m.id,
         Title: m.Title,
@@ -113,11 +194,10 @@ export default function App() {
       }));
       localStorage.setItem('cinetrack_pro_v2_watchlist', JSON.stringify(cleanList));
     } catch (err) {
-      console.warn("Storage write protected:", err);
+      console.warn("Storage write error:", err);
     }
   }, [watchlist]);
 
-  // Toast Notification System
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -125,7 +205,7 @@ export default function App() {
     }, 2200);
   };
 
-  // Hardware Back Button Controller
+  // Hardware Back Button
   const pushedHistoryRef = useRef(false);
 
   useEffect(() => {
@@ -179,7 +259,6 @@ export default function App() {
     };
   }, [selectedMovie, activeTrailer]);
 
-  // Formatter
   const formatTmdbMovie = useCallback((item) => ({
     id: item.id,
     Title: item.title || item.original_title || 'Untitled Cinema',
@@ -193,7 +272,6 @@ export default function App() {
     Runtime: '120 min'
   }), []);
 
-  // Fetch Trending / Genres with caching
   const fetchCategoryMovies = useCallback(async (genre) => {
     if (cacheRef.current[genre]) {
       setMovies(cacheRef.current[genre]);
@@ -214,6 +292,8 @@ export default function App() {
         const formatted = data.results.slice(0, 24).map(formatTmdbMovie);
         cacheRef.current[genre] = formatted;
         setMovies(formatted);
+      } else {
+        setMovies(INITIAL_POPULAR);
       }
     } catch {
       setMovies(INITIAL_POPULAR);
@@ -222,12 +302,10 @@ export default function App() {
     }
   }, [formatTmdbMovie]);
 
-  // Initial Load
   useEffect(() => {
     fetchCategoryMovies('Trending');
   }, [fetchCategoryMovies]);
 
-  // Search API
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
     const query = (searchQuery || '').trim();
@@ -271,7 +349,6 @@ export default function App() {
     handleGenreChange('Trending');
   };
 
-  // Movie Details & Extra Metadata
   const openMovieDetails = async (movie) => {
     setSelectedMovie(movie);
     try {
@@ -293,11 +370,10 @@ export default function App() {
         }));
       }
     } catch {
-      // Smooth fallback silently
+      // safe fallback
     }
   };
 
-  // Official HD Trailer Launch System
   const handlePlayTrailer = async (movie) => {
     try {
       const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}`);
@@ -314,7 +390,6 @@ export default function App() {
     }
   };
 
-  // 1-Click Native Social Share API
   const handleShareMovie = async (movie, e) => {
     if (e) e.stopPropagation();
     const shareText = `Check out "${movie.Title}" (${movie.Year}) on CineTrack • Rating: ${movie.imdbRating} ⭐`;
@@ -328,7 +403,7 @@ export default function App() {
           url: shareUrl
         });
       } catch {
-        // Dismissed by user
+        // dismissed
       }
     } else {
       navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
@@ -336,7 +411,6 @@ export default function App() {
     }
   };
 
-  // Watchlist Actions
   const toggleWatchlist = (movie) => {
     if (!movie?.id) return;
     const exists = watchlist.some((m) => m.id === movie.id);
@@ -433,8 +507,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Sleek Minimalist Navbar (Pure Brand) */}
-      <header className="navbar" style={{ padding: '14px 20px', background: 'rgba(7, 11, 19, 0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* Sleek Brand Navbar */}
+      <header className="navbar">
         <div 
           className="nav-brand" 
           onClick={() => { setActiveTab('explore'); clearSearch(); }}
@@ -446,7 +520,7 @@ export default function App() {
           </span>
         </div>
 
-        <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="nav-actions">
           <button
             onClick={() => {
               setActiveTab('explore');
@@ -487,20 +561,19 @@ export default function App() {
         </div>
       </header>
 
-      <main className="container" style={{ flex: 1, padding: '0 16px' }}>
+      <main className="container" style={{ flex: 1 }}>
         
-        {/* Modern Cyberpunk Hero Header */}
+        {/* Neon Hero Section */}
         {activeTab === 'explore' && !searchQuery && (
           <section style={{
             textAlign: 'center',
-            padding: '38px 12px 24px 12px',
+            padding: '36px 12px 24px 12px',
             position: 'relative',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            {/* Neon Glow Backdrop */}
             <div style={{
               position: 'absolute',
               top: '50%',
@@ -514,7 +587,6 @@ export default function App() {
               zIndex: 0
             }} />
 
-            {/* Glowing Brand Title */}
             <h1 style={{
               fontSize: 'clamp(2.5rem, 8vw, 4rem)',
               fontWeight: 900,
@@ -540,7 +612,6 @@ export default function App() {
               Curate your cinema watchlist, watch official HD trailers, and track verified global ratings.
             </p>
 
-            {/* Spotlight Highlight Badge */}
             {movies.length > 0 && (
               <div 
                 onClick={() => openMovieDetails(movies[0])}
@@ -600,8 +671,8 @@ export default function App() {
 
         {/* Search Bar */}
         {activeTab === 'explore' && (
-          <form onSubmit={handleSearch} className="search-wrapper" style={{ margin: '8px 0 16px 0' }}>
-            <div className="search-input-box" style={{ background: '#0f172a', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+          <form onSubmit={handleSearch} className="search-wrapper">
+            <div className="search-input-box">
               <Search size={16} color="#38bdf8" />
               <input
                 type="text"
@@ -619,7 +690,7 @@ export default function App() {
                 </button>
               )}
             </div>
-            <button type="submit" className="btn-primary" style={{ background: '#0284c7' }}>
+            <button type="submit" className="btn-primary">
               {isLoading ? '...' : 'Search'}
             </button>
           </form>
@@ -649,7 +720,6 @@ export default function App() {
                 </button>
               ))}
 
-              {/* 8.0+ Rating Toggle */}
               <button
                 onClick={() => setFilterTopRatedOnly(!filterTopRatedOnly)}
                 style={{
@@ -715,7 +785,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Watchlist Filters & Tools */}
+        {/* Watchlist Filter Buttons */}
         {activeTab === 'watchlist' && (
           <div style={{ margin: '0.8rem 0 1.2rem 0', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -789,7 +859,7 @@ export default function App() {
 
         {/* Movies Grid */}
         <section>
-          <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 14px 0', fontSize: '1.05rem', fontWeight: 800 }}>
+          <h2 className="section-title">
             {selectedGenre === 'Trending' ? <Flame size={18} color="#f97316" /> : <Film size={18} color="#38bdf8" />}
             {activeTab === 'explore'
               ? searchQuery
@@ -835,7 +905,7 @@ export default function App() {
                   onClick={() => openMovieDetails(movie)}
                 >
                   <div className="rating-badge">
-                    <Star size={10} fill="#fbbf24" color="#fbbf24" />
+                    <Star size={11} fill="#fbbf24" color="#fbbf24" />
                     <span>{movie?.imdbRating}</span>
                   </div>
 
@@ -861,22 +931,22 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Quick Trailer Button inside Card */}
+                    {/* Quick Trailer Button */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handlePlayTrailer(movie);
                       }}
                       style={{
-                        marginTop: '6px',
+                        marginTop: '8px',
                         width: '100%',
-                        padding: '6px',
+                        padding: '7px',
                         borderRadius: '6px',
                         border: 'none',
                         background: 'linear-gradient(90deg, #dc2626, #ef4444)',
                         color: '#fff',
                         fontWeight: 700,
-                        fontSize: '0.72rem',
+                        fontSize: '0.74rem',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -884,10 +954,10 @@ export default function App() {
                         gap: '4px'
                       }}
                     >
-                      <Play size={11} fill="#ffffff" /> TRAILER
+                      <Play size={12} fill="#ffffff" /> TRAILER
                     </button>
 
-                    {/* Watchlist Tools (if in watchlist tab) */}
+                    {/* Watchlist Tools inside Watchlist Tab */}
                     {activeTab === 'watchlist' && (
                       <div style={{ margin: '6px 0 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
@@ -923,7 +993,7 @@ export default function App() {
                       </div>
                     )}
 
-                    <div style={{ marginTop: '5px', display: 'flex', gap: '4px' }}>
+                    <div style={{ marginTop: '6px', display: 'flex', gap: '4px' }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -932,7 +1002,7 @@ export default function App() {
                         style={{
                           flex: 1,
                           padding: '5px',
-                          borderRadius: '5px',
+                          borderRadius: '6px',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           background: isMovieInWatchlist(movie?.id)
                             ? 'rgba(74, 222, 128, 0.15)'
@@ -963,7 +1033,7 @@ export default function App() {
                         title="Share movie"
                         style={{
                           padding: '5px 8px',
-                          borderRadius: '5px',
+                          borderRadius: '6px',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           background: 'rgba(255, 255, 255, 0.05)',
                           color: '#94a3b8',
@@ -984,7 +1054,7 @@ export default function App() {
         </section>
       </main>
 
-      {/* Modern Signature Footer */}
+      {/* Signature Modern Footer */}
       <footer
         style={{
           marginTop: 'auto',
@@ -999,7 +1069,7 @@ export default function App() {
         Crafted with <span style={{ color: '#38bdf8' }}>⚡</span> by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>Lord Black</strong>
       </footer>
 
-      {/* Official YouTube Trailer Modal */}
+      {/* Official HD Trailer Modal */}
       {activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
@@ -1017,7 +1087,6 @@ export default function App() {
             }} 
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -1052,7 +1121,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Video / Fallback View */}
             <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000' }}>
               {activeTrailer.videoId ? (
                 <iframe
@@ -1065,9 +1133,9 @@ export default function App() {
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
                   <Film size={40} color="#38bdf8" style={{ marginBottom: '12px', opacity: 0.8 }} />
-                  <h3 style={{ fontSize: '1.1rem', color: '#fff', margin: '0 0 6px 0' }}>Preview Stream Available on YouTube</h3>
+                  <h3 style={{ fontSize: '1.1rem', color: '#fff', margin: '0 0 6px 0' }}>Official Trailer via YouTube</h3>
                   <p style={{ color: '#94a3b8', fontSize: '0.8rem', maxWidth: '380px', margin: '0 0 16px 0' }}>
-                    Direct trailer embed for "{activeTrailer.title}" is streaming via YouTube Official Hub.
+                    Preview for "{activeTrailer.title}" is streaming via the YouTube Official Channel.
                   </p>
                   <a
                     href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${activeTrailer.title} official trailer`)}`}
@@ -1177,7 +1245,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Where to Watch (OTT Providers) */}
+                {/* Where to Watch */}
                 <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '6px' }}>
                     <Tv size={13} /> OFFICIAL STREAMING PROVIDERS
