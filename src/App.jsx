@@ -3,7 +3,7 @@ import {
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, Eye, AlertCircle, Play, 
   Shuffle, CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Sparkles, MonitorPlay, Radio
+  ArrowUpDown, Tv, Flame, Sparkles, MonitorPlay
 } from 'lucide-react';
 import './App.css';
 
@@ -80,7 +80,7 @@ export default function App() {
   const [watchlistFilter, setWatchlistFilter] = useState('All');
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Crash-proof Watchlist with LocalStorage
+  // Crash-proof Watchlist
   const [watchlist, setWatchlist] = useState(() => {
     try {
       const saved = localStorage.getItem('cinetrack_pro_watchlist');
@@ -173,7 +173,7 @@ export default function App() {
     Runtime: '120 min'
   });
 
-  // Initial Fetch
+  // Initial Trending Fetch
   useEffect(() => {
     const fetchInitial = async () => {
       try {
@@ -276,7 +276,7 @@ export default function App() {
     }
   };
 
-  // Launch Watch Player (Embed or Trailer)
+  // Launch Watch Player
   const launchPlayer = async (movie, initialMode = 'stream') => {
     let trailerKey = null;
     try {
@@ -359,17 +359,19 @@ export default function App() {
     return list;
   }, [activeTab, movies, watchlist, watchlistFilter, sortBy]);
 
-  // Streaming Embed URL Generator
+  // Unblocked High-Speed Embed URL Generator
   const getStreamUrl = (movieId, serverNum) => {
     switch (serverNum) {
       case 1:
-        return `https://vidsrc.icu/embed/movie/${movieId}`;
+        return `https://vidsrc.pm/embed/movie/${movieId}`;
       case 2:
-        return `https://vidsrc.cc/v2/embed/movie/${movieId}`;
+        return `https://vidsrc.in/embed/movie/${movieId}`;
       case 3:
-        return `https://multiembed.mov/?video_id=${movieId}&tmdb=1`;
+        return `https://www.2embed.cc/embed/${movieId}`;
+      case 4:
+        return `https://player.smashy.stream/movie/${movieId}`;
       default:
-        return `https://vidsrc.icu/embed/movie/${movieId}`;
+        return `https://vidsrc.pm/embed/movie/${movieId}`;
     }
   };
 
@@ -458,7 +460,7 @@ export default function App() {
 
       <main className="container" style={{ flex: 1, padding: '0 16px' }}>
         
-        {/* Neon Hero Section (Replacing big resident evil banner) */}
+        {/* Neon Hero Section */}
         {activeTab === 'explore' && !searchQuery && (
           <section style={{
             textAlign: 'center',
@@ -469,7 +471,6 @@ export default function App() {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            {/* Glowing Neon Backdrop Effect */}
             <div style={{
               position: 'absolute',
               top: '50%',
@@ -483,7 +484,6 @@ export default function App() {
               zIndex: 0
             }} />
 
-            {/* Neon Title */}
             <h1 style={{
               fontSize: 'clamp(2.4rem, 7vw, 3.8rem)',
               fontWeight: 900,
@@ -509,7 +509,6 @@ export default function App() {
               Discover real-time trending cinema, watch official trailers, and stream seamless high-performance playback.
             </p>
 
-            {/* Quick Watch Highlight Button */}
             {movies.length > 0 && (
               <button
                 onClick={() => launchPlayer(movies[0], 'stream')}
@@ -962,53 +961,26 @@ export default function App() {
                 </span>
               </div>
 
-              {/* Mode & Server Selector Buttons */}
+              {/* Server Switches */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => setActivePlayer(prev => ({ ...prev, mode: 'stream', server: 1 }))}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: activePlayer.mode === 'stream' && activePlayer.server === 1 ? '#0284c7' : 'rgba(255,255,255,0.08)',
-                    color: '#fff',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Server 1
-                </button>
-                <button
-                  onClick={() => setActivePlayer(prev => ({ ...prev, mode: 'stream', server: 2 }))}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: activePlayer.mode === 'stream' && activePlayer.server === 2 ? '#0284c7' : 'rgba(255,255,255,0.08)',
-                    color: '#fff',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Server 2
-                </button>
-                <button
-                  onClick={() => setActivePlayer(prev => ({ ...prev, mode: 'stream', server: 3 }))}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: activePlayer.mode === 'stream' && activePlayer.server === 3 ? '#0284c7' : 'rgba(255,255,255,0.08)',
-                    color: '#fff',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Server 3
-                </button>
+                {[1, 2, 3, 4].map((sNum) => (
+                  <button
+                    key={sNum}
+                    onClick={() => setActivePlayer(prev => ({ ...prev, mode: 'stream', server: sNum }))}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: activePlayer.mode === 'stream' && activePlayer.server === sNum ? '#0284c7' : 'rgba(255,255,255,0.08)',
+                      color: '#fff',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Server {sNum}
+                  </button>
+                ))}
 
                 {activePlayer.trailerKey && (
                   <button
@@ -1071,11 +1043,34 @@ export default function App() {
               )}
             </div>
 
-            {/* Server notice under player */}
-            <div style={{ padding: '6px 12px', background: '#0b1120', fontSize: '0.68rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Streaming via Fast Edge Embeds • If a server is buffering, switch servers above.</span>
-              <span style={{ color: '#38bdf8' }}>HD Mode</span>
-            </div>
+            {/* Direct Fallback Stream Bar */}
+            {activePlayer.mode === 'stream' && (
+              <div style={{ padding: '8px 12px', background: '#0b1120', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                  If network blocks the video frame:
+                </span>
+                <a
+                  href={getStreamUrl(activePlayer.movie.id, activePlayer.server)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    border: '1px solid #38bdf8',
+                    color: '#38bdf8',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  Open Stream in Tab ↗
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}
