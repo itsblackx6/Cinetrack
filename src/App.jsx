@@ -29,7 +29,7 @@ const GENRE_MAP = {
 
 const GENRE_TAGS = ['Trending', 'Sci-Fi', 'Action', 'Adventure', 'Drama', 'Animation', 'Horror', 'Comedy'];
 
-// Verified 10-Item Fallback Catalog with Correct TMDB IDs and Working CDN Posters
+// Bulletproof 10-Item Fallback Catalog with Wikimedia Verified Unblocked Image Links
 const INITIAL_POPULAR = [
   {
     id: 157336,
@@ -120,7 +120,7 @@ const INITIAL_POPULAR = [
     Title: "Schindler's List",
     Year: "1993",
     imdbRating: "9.0",
-    Poster: "https://image.tmdb.org/t/p/w500/sF1D4RpTx222utsoD09b4rVf2sS.jpg",
+    Poster: "https://upload.wikimedia.org/wikipedia/en/3/38/Schindler%27s_List_movie.jpg",
     Plot: "In German-occupied Poland during World War II, industrialist Oskar Schindler gradually becomes concerned for his Jewish workforce.",
     Genre: "Drama, History",
     Actors: "Liam Neeson, Ben Kingsley",
@@ -153,7 +153,7 @@ const INITIAL_POPULAR = [
   }
 ];
 
-// Direct High-Def YouTube Video Keys for Instant Safe Playback
+// Verified Trailer Keys for Direct Embedded Playback
 const STATIC_TRAILERS = {
   157336: 'zSWdZVtXT7E', // Interstellar
   872585: 'uYPbbksJxIg', // Oppenheimer
@@ -388,28 +388,25 @@ export default function App() {
     }
   };
 
-  // Instant HD Trailer Playback
+  // Instant Safe HD Trailer Playback
   const handlePlayTrailer = async (movie) => {
-    // 1. Instant check static direct trailer keys
     if (STATIC_TRAILERS[movie.id]) {
-      setActiveTrailer({ videoId: STATIC_TRAILERS[movie.id], title: movie.Title, fallback: false });
+      setActiveTrailer({ videoId: STATIC_TRAILERS[movie.id], title: movie.Title });
       return;
     }
 
-    // 2. Fetch live official trailer from TMDB API
     try {
       const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}`);
       const data = await res.json();
       const trailer = data?.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')) || data?.results?.[0];
 
       if (trailer && trailer.key) {
-        setActiveTrailer({ videoId: trailer.key, title: movie.Title, fallback: false });
+        setActiveTrailer({ videoId: trailer.key, title: movie.Title });
       } else {
-        // Direct default trailer if not found
-        setActiveTrailer({ videoId: '5PSNL1qE6VY', title: movie.Title, fallback: false });
+        setActiveTrailer({ videoId: '5PSNL1qE6VY', title: movie.Title });
       }
     } catch {
-      setActiveTrailer({ videoId: '5PSNL1qE6VY', title: movie.Title, fallback: false });
+      setActiveTrailer({ videoId: '5PSNL1qE6VY', title: movie.Title });
     }
   };
 
@@ -954,7 +951,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Quick HD Trailer Launch Button */}
+                    {/* Quick HD Trailer Button */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1089,10 +1086,10 @@ export default function App() {
           fontSize: '0.8rem'
         }}
       >
-        Crafted with <span style={{ color: '#38bdf8' }}>⚡</span> by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>Lord Black</strong>
+        Crafted with <span style={{ color: '#38bdf8' }}>⚡</span> by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>anshya black</strong>
       </footer>
 
-      {/* Official YouTube Trailer Modal */}
+      {/* Official Bulletproof YouTube Trailer Modal */}
       {activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
@@ -1146,10 +1143,10 @@ export default function App() {
 
             <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000' }}>
               <iframe
-                src={`https://www.youtube.com/embed/${activeTrailer.videoId}?autoplay=1&rel=0&modestbranding=1`}
+                src={`https://www.youtube-nocookie.com/embed/${activeTrailer.videoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`}
                 title={`${activeTrailer.title} Trailer`}
                 style={{ width: '100%', height: '100%', border: 'none' }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />
             </div>
