@@ -3,7 +3,7 @@ import {
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, Eye, AlertCircle, Play, 
   CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard, Sparkles
+  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard, Sparkles, ShieldCheck
 } from 'lucide-react';
 import './App.css';
 
@@ -192,12 +192,12 @@ export default function App() {
 
   useEffect(() => {
     try {
-      const cleanList = watchlist.slice(0, 100).map(m => ({
+      const cleanList = (watchlist || []).slice(0, 100).map(m => ({
         id: m.id,
-        Title: m.Title,
-        Year: m.Year,
-        imdbRating: m.imdbRating,
-        Poster: m.Poster,
+        Title: m.Title || 'Movie',
+        Year: m.Year || '',
+        imdbRating: m.imdbRating || '7.0',
+        Poster: m.Poster || SVG_POSTER_PLACEHOLDER,
         Plot: m.Plot ? m.Plot.slice(0, 220) : '',
         Genre: m.Genre || 'Cinema',
         userStatus: m.userStatus || 'Plan to Watch',
@@ -268,18 +268,21 @@ export default function App() {
     };
   }, [selectedMovie, activeTrailer]);
 
-  const formatTmdbMovie = useCallback((item) => ({
-    id: item.id,
-    Title: item.title || item.original_title || 'Untitled Cinema',
-    Year: item.release_date ? item.release_date.split('-')[0] : '2026',
-    imdbRating: item.vote_average ? item.vote_average.toFixed(1) : '7.5',
-    Poster: item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : SVG_POSTER_PLACEHOLDER,
-    Plot: item.overview || 'No synopsis provided.',
-    Genre: 'Cinema',
-    Actors: 'Featured Cast',
-    Director: 'Director',
-    Runtime: '120 min'
-  }), []);
+  const formatTmdbMovie = useCallback((item) => {
+    const currentYear = new Date().getFullYear().toString();
+    return {
+      id: item?.id || Math.floor(Math.random() * 100000),
+      Title: item?.title || item?.original_title || 'Untitled Cinema',
+      Year: item?.release_date ? item.release_date.split('-')[0] : currentYear,
+      imdbRating: item?.vote_average ? item.vote_average.toFixed(1) : '7.5',
+      Poster: item?.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : SVG_POSTER_PLACEHOLDER,
+      Plot: item?.overview || 'No synopsis provided.',
+      Genre: 'Cinema',
+      Actors: 'Featured Cast',
+      Director: 'Director',
+      Runtime: '120 min'
+    };
+  }, []);
 
   const fetchCategoryMovies = useCallback(async (genre) => {
     if (cacheRef.current[genre]) {
@@ -296,6 +299,7 @@ export default function App() {
         : `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${GENRE_MAP[genre]}&sort_by=popularity.desc`;
 
       const res = await fetch(endpoint);
+      if (!res.ok) throw new Error('API request failed');
       const data = await res.json();
       if (data && data.results && data.results.length > 0) {
         const formatted = data.results.slice(0, 24).map(formatTmdbMovie);
@@ -330,6 +334,7 @@ export default function App() {
       const res = await fetch(
         `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
       );
+      if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
 
       if (data && data.results && data.results.length > 0) {
@@ -362,6 +367,7 @@ export default function App() {
     setSelectedMovie(movie);
     try {
       const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
+      if (!res.ok) return;
       const details = await res.json();
       if (details) {
         const genres = details.genres ? details.genres.map(g => g.name).join(', ') : movie.Genre;
@@ -384,6 +390,7 @@ export default function App() {
   };
 
   const handlePlayTrailer = async (movie) => {
+    if (!movie) return;
     if (STATIC_TRAILERS[movie.id]) {
       setActiveTrailer({ videoId: STATIC_TRAILERS[movie.id], title: movie.Title });
       return;
@@ -391,6 +398,7 @@ export default function App() {
 
     try {
       const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}`);
+      if (!res.ok) throw new Error('Video fetch failed');
       const data = await res.json();
       const trailer = data?.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')) || data?.results?.[0];
 
@@ -577,7 +585,7 @@ export default function App() {
 
       <main className="container" style={{ flex: 1 }}>
         
-        {/* Glowing Neon Cyberpunk Hero Header */}
+        {/* Hero Header */}
         {activeTab === 'explore' && !searchQuery && (
           <section style={{
             textAlign: 'center',
@@ -655,7 +663,7 @@ export default function App() {
           </section>
         )}
 
-        {/* Watchlist Quick Overview Stats */}
+        {/* Watchlist Stats */}
         {activeTab === 'watchlist' && (
           <div style={{
             marginTop: '1rem',
@@ -710,7 +718,7 @@ export default function App() {
           </form>
         )}
 
-        {/* Genre Chips & Smart Filter Bar */}
+        {/* Filters */}
         {activeTab === 'explore' && (
           <div style={{ margin: '0 0 1.2rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <div className="no-scrollbar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', flex: 1, paddingBottom: '4px' }}>
@@ -941,7 +949,7 @@ export default function App() {
                           {movie?.Title}
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '1px' }}>
-                          {movie?.Year || '2026'} • TMDB VERIFIED
+                          {movie?.Year || 'Cinema'} • TMDB VERIFIED
                         </div>
                       </div>
 
@@ -971,7 +979,7 @@ export default function App() {
                         <Play size={12} fill="#ffffff" /> TRAILER
                       </button>
 
-                      {/* Watchlist Controls inside Watchlist Tab */}
+                      {/* Watchlist Controls */}
                       {activeTab === 'watchlist' && (
                         <div style={{ margin: '6px 0 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
@@ -1063,7 +1071,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* High Converting Native Ad / Sponsor Placement */}
+                  {/* Native Affiliate Card */}
                   {activeTab === 'explore' && idx === 5 && (
                     <div className="native-ad-card">
                       <span className="ad-badge">SPONSORED</span>
@@ -1073,7 +1081,7 @@ export default function App() {
                         Stream 4K blockbusters, HDR trailers & exclusive shows with instant access.
                       </p>
                       <a
-                        href="https://www.primevideo.com"
+                        href="https://www.amazon.in/amazonprime?tag=cinetrack-21"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn-primary"
@@ -1090,22 +1098,28 @@ export default function App() {
         </section>
       </main>
 
-      {/* Signature Modern Footer */}
+      {/* Signature Modern Footer with Amazon Compliance Disclosure */}
       <footer
         style={{
           marginTop: 'auto',
-          padding: '20px 14px',
+          padding: '24px 14px 20px 14px',
           textAlign: 'center',
           borderTop: '1px solid rgba(255, 255, 255, 0.06)',
           background: 'rgba(7, 11, 19, 0.98)',
           color: '#64748b',
-          fontSize: '0.8rem'
+          fontSize: '0.78rem'
         }}
       >
-        Developed and owned by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>anshya</strong>
+        <div style={{ maxWidth: '650px', margin: '0 auto 12px auto', lineHeight: '1.5', color: '#64748b', fontSize: '0.72rem' }}>
+          <ShieldCheck size={14} color="#38bdf8" style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '4px' }} />
+          <strong>Affiliate Disclosure:</strong> As an Amazon Associate, CineTrack earns from qualifying purchases. Product prices and availability are accurate as of the date/time indicated and are subject to change.
+        </div>
+        <div>
+          Developed and owned by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>anshya</strong>
+        </div>
       </footer>
 
-      {/* Official Bulletproof YouTube Trailer Modal */}
+      {/* YouTube Trailer Modal */}
       {activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
@@ -1252,7 +1266,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Where to Watch + All Official Streaming Apps in 3x2 Grid */}
+                {/* Where to Watch */}
                 <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
                     <Tv size={13} /> OFFICIAL STREAMING & RENTALS
@@ -1264,12 +1278,21 @@ export default function App() {
                     gap: '6px', 
                     width: '100%' 
                   }}>
+                    {/* Amazon Affiliate Link */}
                     <a
-                      href={`https://www.primevideo.com/search?phrase=${encodeURIComponent(selectedMovie?.Title || '')}`}
+                      href={`https://www.amazon.in/s?k=${encodeURIComponent(selectedMovie?.Title || '')}&i=instant-video&tag=cinetrack-21`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="affiliate-ott-btn"
-                      style={{ justifyContent: 'center', padding: '4px 2px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}
+                      style={{ 
+                        justifyContent: 'center', 
+                        padding: '4px 2px', 
+                        fontSize: '0.68rem', 
+                        whiteSpace: 'nowrap',
+                        background: '#00A8E1',
+                        color: '#ffffff',
+                        fontWeight: 700
+                      }}
                     >
                       Prime Video <ExternalLink size={10} />
                     </a>
