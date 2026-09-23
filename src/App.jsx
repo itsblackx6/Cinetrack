@@ -3,7 +3,7 @@ import {
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, Eye, AlertCircle, Play, 
   CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard, Sparkles, ShieldCheck
+  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard, Sparkles, ShieldCheck, Mail, Info, FileText
 } from 'lucide-react';
 import './App.css';
 
@@ -178,6 +178,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
   const [watchlistFilter, setWatchlistFilter] = useState('All');
   const [toastMessage, setToastMessage] = useState(null);
+  const [activeLegalModal, setActiveLegalModal] = useState(null);
 
   const cacheRef = useRef({});
 
@@ -225,12 +226,14 @@ export default function App() {
         setActiveTrailer(null);
       } else if (selectedMovie) {
         setSelectedMovie(null);
+      } else if (activeLegalModal) {
+        setActiveLegalModal(null);
       } else if (activeTab === 'watchlist') {
         setActiveTab('explore');
       }
     };
 
-    if (activeTrailer || selectedMovie || activeTab === 'watchlist') {
+    if (activeTrailer || selectedMovie || activeLegalModal || activeTab === 'watchlist') {
       window.history.pushState({ modalOrTab: true }, '');
       pushedHistoryRef.current = true;
     }
@@ -239,7 +242,7 @@ export default function App() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [activeTrailer, selectedMovie, activeTab]);
+  }, [activeTrailer, selectedMovie, activeLegalModal, activeTab]);
 
   const closeModalsSafely = () => {
     if (pushedHistoryRef.current) {
@@ -247,11 +250,12 @@ export default function App() {
     } else {
       setActiveTrailer(null);
       setSelectedMovie(null);
+      setActiveLegalModal(null);
     }
   };
 
   useEffect(() => {
-    if (selectedMovie || activeTrailer) {
+    if (selectedMovie || activeTrailer || activeLegalModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -266,7 +270,7 @@ export default function App() {
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedMovie, activeTrailer]);
+  }, [selectedMovie, activeTrailer, activeLegalModal]);
 
   const formatTmdbMovie = useCallback((item) => {
     const currentYear = new Date().getFullYear().toString();
@@ -430,6 +434,26 @@ export default function App() {
     } else {
       navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
       showToast("Link & details copied to clipboard!");
+    }
+  };
+
+  const handleShareFullWatchlist = () => {
+    if (watchlist.length === 0) {
+      showToast("Watchlist is empty!");
+      return;
+    }
+    const movieTitles = watchlist.slice(0, 8).map((m, i) => `${i + 1}. ${m.Title} (${m.imdbRating}⭐)`).join('\n');
+    const shareMessage = `🍿 My Cinema Watchlist on CineTrack:\n\n${movieTitles}\n\nExplore and build yours on CineTrack: ${window.location.origin}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: "My CineTrack Watchlist",
+        text: shareMessage,
+        url: window.location.origin
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareMessage);
+      showToast("Watchlist copied! Ready to share.");
     }
   };
 
@@ -663,7 +687,7 @@ export default function App() {
           </section>
         )}
 
-        {/* Watchlist Stats */}
+        {/* Watchlist Stats & Quick Share */}
         {activeTab === 'watchlist' && (
           <div style={{
             marginTop: '1rem',
@@ -807,7 +831,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Watchlist Filter Buttons */}
+        {/* Watchlist Filter Buttons & Share Watchlist */}
         {activeTab === 'watchlist' && (
           <div style={{ margin: '0.8rem 0 1.2rem 0', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -832,6 +856,27 @@ export default function App() {
             </div>
 
             <div style={{ display: 'flex', gap: '6px' }}>
+              {/* Share Watchlist to WhatsApp / Friends */}
+              <button
+                onClick={handleShareFullWatchlist}
+                title="Share Watchlist"
+                style={{
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  border: '1px solid rgba(34, 197, 94, 0.35)',
+                  color: '#4ade80',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 700
+                }}
+              >
+                <Share2 size={12} /> Share List
+              </button>
+
               <button
                 onClick={exportWatchlist}
                 title="Export list as JSON"
@@ -1098,26 +1143,161 @@ export default function App() {
         </section>
       </main>
 
-      {/* Signature Modern Footer with Amazon Compliance Disclosure */}
+      {/* AdSense Compliant Footer with Legal Links & Modals */}
       <footer
         style={{
           marginTop: 'auto',
           padding: '24px 14px 20px 14px',
           textAlign: 'center',
-          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           background: 'rgba(7, 11, 19, 0.98)',
           color: '#64748b',
           fontSize: '0.78rem'
         }}
       >
-        <div style={{ maxWidth: '650px', margin: '0 auto 12px auto', lineHeight: '1.5', color: '#64748b', fontSize: '0.72rem' }}>
-          <ShieldCheck size={14} color="#38bdf8" style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '4px' }} />
-          <strong>Affiliate Disclosure:</strong> As an Amazon Associate, CineTrack earns from qualifying purchases. Product prices and availability are accurate as of the date/time indicated and are subject to change.
+        <div style={{ maxWidth: '720px', margin: '0 auto 16px auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          
+          {/* Quick Legal & Support Links (Crucial for AdSense Approval) */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setActiveLegalModal('privacy')}
+              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}
+            >
+              Privacy Policy
+            </button>
+            <button
+              onClick={() => setActiveLegalModal('about')}
+              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}
+            >
+              About CineTrack
+            </button>
+            <button
+              onClick={() => setActiveLegalModal('contact')}
+              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}
+            >
+              Contact Support
+            </button>
+          </div>
+
+          <div style={{ lineHeight: '1.5', color: '#64748b', fontSize: '0.72rem' }}>
+            <ShieldCheck size={14} color="#38bdf8" style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '4px' }} />
+            <strong>Affiliate Disclosure:</strong> As an Amazon Associate, CineTrack earns from qualifying purchases. Product prices, cinema details, and availability are accurate as of the date/time indicated and are subject to change.
+          </div>
         </div>
+
         <div>
-          Developed and owned by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>anshya</strong>
+          Developed and owned by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>anshya</strong> • Powered by TMDB & AdSense
         </div>
       </footer>
+
+      {/* Legal Popups Modal (Privacy Policy, About Us, Contact Us) */}
+      {activeLegalModal && (
+        <div className="modal-overlay" onClick={closeModalsSafely}>
+          <div 
+            style={{
+              backgroundColor: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '12px',
+              maxWidth: '560px',
+              width: '92%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              padding: '24px',
+              textAlign: 'left',
+              color: '#cbd5e1',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeModalsSafely}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '26px',
+                height: '26px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={15} />
+            </button>
+
+            {activeLegalModal === 'privacy' && (
+              <div>
+                <h3 style={{ color: '#f8fafc', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileText size={18} color="#38bdf8" /> Privacy Policy
+                </h3>
+                <p style={{ fontSize: '0.82rem', lineHeight: '1.5' }}>
+                  Welcome to CineTrack (<code>cinetrack-eta-ten.vercel.app</code>). Your privacy is essential to us.
+                </p>
+                <h4 style={{ color: '#38bdf8', marginBottom: '4px', fontSize: '0.9rem' }}>Google AdSense & Cookies</h4>
+                <p style={{ fontSize: '0.8rem', lineHeight: '1.5', color: '#94a3b8' }}>
+                  We utilize Google AdSense to serve advertisements during your visit to our website. Google and its certified vendor partners use cookies (such as DoubleClick) to serve ads based on prior browsing history. You may opt out of personalized ads at any time through <a href="https://www.google.com/settings/ads" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>Google Ads Settings</a>.
+                </p>
+                <h4 style={{ color: '#38bdf8', marginBottom: '4px', fontSize: '0.9rem' }}>Third-Party Affiliates & TMDB</h4>
+                <p style={{ fontSize: '0.8rem', lineHeight: '1.5', color: '#94a3b8' }}>
+                  CineTrack is a participant in the Amazon Services LLC Associates Program and uses The Movie Database (TMDB) API for media discovery. We do not store or transmit sensitive user credentials on external databases.
+                </p>
+              </div>
+            )}
+
+            {activeLegalModal === 'about' && (
+              <div>
+                <h3 style={{ color: '#f8fafc', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Info size={18} color="#38bdf8" /> About CineTrack
+                </h3>
+                <p style={{ fontSize: '0.82rem', lineHeight: '1.5' }}>
+                  CineTrack is an entertainment discovery engine engineered to help cinema lovers explore trending releases, stream official HD trailers, track global IMDb/TMDB scores, and curate personal watchlists.
+                </p>
+                <p style={{ fontSize: '0.8rem', lineHeight: '1.5', color: '#94a3b8' }}>
+                  Built with high performance React and Vite, CineTrack ensures seamless mobile cinema navigation without intrusive tracking.
+                </p>
+              </div>
+            )}
+
+            {activeLegalModal === 'contact' && (
+              <div>
+                <h3 style={{ color: '#f8fafc', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Mail size={18} color="#38bdf8" /> Contact & Feedback
+                </h3>
+                <p style={{ fontSize: '0.82rem', lineHeight: '1.5' }}>
+                  Have questions, feature suggestions, or copyright inquiries? Reach out to the owner directly:
+                </p>
+                <div style={{ background: 'rgba(255,255,255,0.04)', padding: '12px', borderRadius: '8px', marginTop: '12px' }}>
+                  <p style={{ margin: '0 0 6px 0', fontSize: '0.82rem' }}><strong>Platform:</strong> CineTrack Official</p>
+                  <p style={{ margin: '0', fontSize: '0.82rem' }}><strong>Direct Support:</strong> <span style={{ color: '#38bdf8' }}>itsblackx6@gmail.com</span></p>
+                </div>
+              </div>
+            )}
+
+            <button 
+              onClick={closeModalsSafely}
+              style={{
+                marginTop: '22px',
+                width: '100%',
+                padding: '9px',
+                backgroundColor: '#2563eb',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '0.82rem'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* YouTube Trailer Modal */}
       {activeTrailer && (
