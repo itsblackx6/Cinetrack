@@ -3,7 +3,7 @@ import {
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, Eye, AlertCircle, Play, 
   CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard
+  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard, Sparkles
 } from 'lucide-react';
 import './App.css';
 
@@ -29,7 +29,6 @@ const GENRE_MAP = {
 
 const GENRE_TAGS = ['Trending', 'Sci-Fi', 'Action', 'Adventure', 'Drama', 'Animation', 'Horror', 'Comedy'];
 
-// Bulletproof 10-Item Fallback Catalog with Wikimedia Verified Unblocked Image Links
 const INITIAL_POPULAR = [
   {
     id: 157336,
@@ -153,18 +152,17 @@ const INITIAL_POPULAR = [
   }
 ];
 
-// Verified Trailer Keys for Direct Embedded Playback
 const STATIC_TRAILERS = {
-  157336: 'zSWdZVtXT7E', // Interstellar
-  872585: 'uYPbbksJxIg', // Oppenheimer
-  155: 'EXeTwQWrcwY',    // The Dark Knight
-  693134: 'Way9Dexny3w', // Dune 2
-  27205: 'YoHD9XEInc0',  // Inception
-  299536: '6ZfuNTqbHE8', // Infinity War
-  569094: 'cqGjhVJWtEg', // Spider-Verse
-  424: 'gG22XNhtnoY',    // Schindler's List
-  766: '5PSNL1qE6VY',    // Avatar
-  98: 'P5ieIbInFpg'      // Gladiator
+  157336: 'zSWdZVtXT7E',
+  872585: 'uYPbbksJxIg',
+  155: 'EXeTwQWrcwY',
+  693134: 'Way9Dexny3w',
+  27205: 'YoHD9XEInc0',
+  299536: '6ZfuNTqbHE8',
+  569094: 'cqGjhVJWtEg',
+  424: 'gG22XNhtnoY',
+  766: '5PSNL1qE6VY',
+  98: 'P5ieIbInFpg'
 };
 
 export default function App() {
@@ -183,7 +181,6 @@ export default function App() {
 
   const cacheRef = useRef({});
 
-  // LocalStorage Safety Engine
   const [watchlist, setWatchlist] = useState(() => {
     try {
       const saved = localStorage.getItem('cinetrack_pro_v2_watchlist');
@@ -219,7 +216,6 @@ export default function App() {
     }, 2200);
   };
 
-  // Hardware Back Button Controller
   const pushedHistoryRef = useRef(false);
 
   useEffect(() => {
@@ -254,7 +250,6 @@ export default function App() {
     }
   };
 
-  // Scroll lock & Escape key handler
   useEffect(() => {
     if (selectedMovie || activeTrailer) {
       document.body.style.overflow = 'hidden';
@@ -388,7 +383,6 @@ export default function App() {
     }
   };
 
-  // Instant Safe HD Trailer Playback
   const handlePlayTrailer = async (movie) => {
     if (STATIC_TRAILERS[movie.id]) {
       setActiveTrailer({ videoId: STATIC_TRAILERS[movie.id], title: movie.Title });
@@ -918,156 +912,178 @@ export default function App() {
             </div>
           ) : (
             <div className="card-grid">
-              {displayedMovies.map((movie) => (
-                <div
-                  key={movie?.id || Math.random()}
-                  className="movie-card"
-                  onClick={() => openMovieDetails(movie)}
-                >
-                  <div className="rating-badge">
-                    <Star size={11} fill="#fbbf24" color="#fbbf24" />
-                    <span>{movie?.imdbRating}</span>
-                  </div>
-
-                  <img
-                    src={movie?.Poster || SVG_POSTER_PLACEHOLDER}
-                    alt={movie?.Title || 'Movie'}
-                    loading="lazy"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = SVG_POSTER_PLACEHOLDER;
-                    }}
-                    className="card-poster"
-                    referrerPolicy="no-referrer"
-                  />
-
-                  <div className="card-info">
-                    <div>
-                      <div className="card-title">
-                        {movie?.Title}
-                      </div>
-                      <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '1px' }}>
-                        {movie?.Year || '2026'} • TMDB VERIFIED
-                      </div>
+              {displayedMovies.map((movie, idx) => (
+                <React.Fragment key={movie?.id || idx}>
+                  <div
+                    className="movie-card"
+                    onClick={() => openMovieDetails(movie)}
+                  >
+                    <div className="rating-badge">
+                      <Star size={11} fill="#fbbf24" color="#fbbf24" />
+                      <span>{movie?.imdbRating}</span>
                     </div>
 
-                    {/* Quick HD Trailer Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePlayTrailer(movie);
+                    <img
+                      src={movie?.Poster || SVG_POSTER_PLACEHOLDER}
+                      alt={movie?.Title || 'Movie'}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = SVG_POSTER_PLACEHOLDER;
                       }}
-                      style={{
-                        marginTop: '8px',
-                        width: '100%',
-                        padding: '7px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: 'linear-gradient(90deg, #dc2626, #ef4444)',
-                        color: '#fff',
-                        fontWeight: 700,
-                        fontSize: '0.74rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Play size={12} fill="#ffffff" /> TRAILER
-                    </button>
+                      className="card-poster"
+                      referrerPolicy="no-referrer"
+                    />
 
-                    {/* Watchlist Controls inside Watchlist Tab */}
-                    {activeTab === 'watchlist' && (
-                      <div style={{ margin: '6px 0 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
-                          {[1, 2, 3, 4, 5].map((starVal) => (
-                            <Star
-                              key={starVal}
-                              size={11}
-                              onClick={() => setUserRating(movie.id, starVal)}
-                              fill={(movie.personalRating || 0) >= starVal ? "#fbbf24" : "none"}
-                              color={(movie.personalRating || 0) >= starVal ? "#fbbf24" : "#475569"}
-                              style={{ cursor: 'pointer' }}
-                            />
-                          ))}
+                    <div className="card-info">
+                      <div>
+                        <div className="card-title">
+                          {movie?.Title}
                         </div>
-                        <select
-                          value={movie.userStatus || 'Plan to Watch'}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => updateStatus(movie.id, e.target.value)}
-                          style={{
-                            background: '#070b13',
-                            color: '#38bdf8',
-                            border: '1px solid rgba(56, 189, 248, 0.3)',
-                            borderRadius: '4px',
-                            padding: '1px 3px',
-                            fontSize: '0.62rem',
-                            outline: 'none'
-                          }}
-                        >
-                          <option value="Plan to Watch">Plan</option>
-                          <option value="Watching">Watching</option>
-                          <option value="Completed">Done</option>
-                        </select>
+                        <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '1px' }}>
+                          {movie?.Year || '2026'} • TMDB VERIFIED
+                        </div>
                       </div>
-                    )}
 
-                    <div style={{ marginTop: '6px', display: 'flex', gap: '4px' }}>
+                      {/* Quick HD Trailer Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleWatchlist(movie);
+                          handlePlayTrailer(movie);
                         }}
                         style={{
-                          flex: 1,
-                          padding: '5px',
+                          marginTop: '8px',
+                          width: '100%',
+                          padding: '7px',
                           borderRadius: '6px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          background: isMovieInWatchlist(movie?.id)
-                            ? 'rgba(74, 222, 128, 0.15)'
-                            : 'rgba(255, 255, 255, 0.05)',
-                          color: isMovieInWatchlist(movie?.id) ? '#4ade80' : '#fff',
-                          fontWeight: 600,
-                          fontSize: '0.68rem',
+                          border: 'none',
+                          background: 'linear-gradient(90deg, #dc2626, #ef4444)',
+                          color: '#fff',
+                          fontWeight: 700,
+                          fontSize: '0.74rem',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '3px'
+                          gap: '4px'
                         }}
                       >
-                        {isMovieInWatchlist(movie?.id) ? (
-                          <>
-                            <Check size={11} /> Saved
-                          </>
-                        ) : (
-                          <>
-                            <Plus size={11} /> Watchlist
-                          </>
-                        )}
+                        <Play size={12} fill="#ffffff" /> TRAILER
                       </button>
 
-                      <button
-                        onClick={(e) => handleShareMovie(movie, e)}
-                        title="Share movie"
-                        style={{
-                          padding: '5px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          color: '#94a3b8',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Share2 size={11} />
-                      </button>
+                      {/* Watchlist Controls inside Watchlist Tab */}
+                      {activeTab === 'watchlist' && (
+                        <div style={{ margin: '6px 0 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
+                            {[1, 2, 3, 4, 5].map((starVal) => (
+                              <Star
+                                key={starVal}
+                                size={11}
+                                onClick={() => setUserRating(movie.id, starVal)}
+                                fill={(movie.personalRating || 0) >= starVal ? "#fbbf24" : "none"}
+                                color={(movie.personalRating || 0) >= starVal ? "#fbbf24" : "#475569"}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            ))}
+                          </div>
+                          <select
+                            value={movie.userStatus || 'Plan to Watch'}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => updateStatus(movie.id, e.target.value)}
+                            style={{
+                              background: '#070b13',
+                              color: '#38bdf8',
+                              border: '1px solid rgba(56, 189, 248, 0.3)',
+                              borderRadius: '4px',
+                              padding: '1px 3px',
+                              fontSize: '0.62rem',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="Plan to Watch">Plan</option>
+                            <option value="Watching">Watching</option>
+                            <option value="Completed">Done</option>
+                          </select>
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: '6px', display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWatchlist(movie);
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '5px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            background: isMovieInWatchlist(movie?.id)
+                              ? 'rgba(74, 222, 128, 0.15)'
+                              : 'rgba(255, 255, 255, 0.05)',
+                            color: isMovieInWatchlist(movie?.id) ? '#4ade80' : '#fff',
+                            fontWeight: 600,
+                            fontSize: '0.68rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          {isMovieInWatchlist(movie?.id) ? (
+                            <>
+                              <Check size={11} /> Saved
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={11} /> Watchlist
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={(e) => handleShareMovie(movie, e)}
+                          title="Share movie"
+                          style={{
+                            padding: '5px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Share2 size={11} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+
+                  {/* High Converting Native Ad / Sponsor Placement */}
+                  {activeTab === 'explore' && idx === 5 && (
+                    <div className="native-ad-card">
+                      <span className="ad-badge">SPONSORED</span>
+                      <Sparkles size={28} color="#38bdf8" style={{ marginBottom: '8px' }} />
+                      <h4 style={{ fontSize: '0.86rem', color: '#f8fafc', marginBottom: '4px' }}>Unlimited Cinema OTT</h4>
+                      <p style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '12px', lineHeight: '1.3' }}>
+                        Stream 4K blockbusters, HDR trailers & exclusive shows with instant access.
+                      </p>
+                      <a
+                        href="https://www.primevideo.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary"
+                        style={{ fontSize: '0.72rem', padding: '6px 14px' }}
+                      >
+                        Start Free Trial
+                      </a>
+                    </div>
+                  )}
+                </React.Fragment>
               ))}
             </div>
           )}
@@ -1086,7 +1102,7 @@ export default function App() {
           fontSize: '0.8rem'
         }}
       >
-        Crafted with <span style={{ color: '#38bdf8' }}>⚡</span> by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>anshya black</strong>
+        Developed and owned by <strong style={{ color: '#f8fafc', letterSpacing: '0.6px' }}>anshya</strong>
       </footer>
 
       {/* Official Bulletproof YouTube Trailer Modal */}
@@ -1236,13 +1252,95 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Where to Watch */}
+                {/* Where to Watch + All Official Streaming Apps in 3x2 Grid */}
                 <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '6px' }}>
-                    <Tv size={13} /> OFFICIAL STREAMING PROVIDERS
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
+                    <Tv size={13} /> OFFICIAL STREAMING & RENTALS
                   </div>
                   
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', 
+                    gap: '6px', 
+                    width: '100%' 
+                  }}>
+                    <a
+                      href={`https://www.primevideo.com/search?phrase=${encodeURIComponent(selectedMovie?.Title || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="affiliate-ott-btn"
+                      style={{ justifyContent: 'center', padding: '4px 2px', fontSize: '0.68rem', whiteSpace: 'nowrap' }}
+                    >
+                      Prime Video <ExternalLink size={10} />
+                    </a>
+
+                    <a
+                      href={`https://www.netflix.com/search?q=${encodeURIComponent(selectedMovie?.Title || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        background: '#e50914',
+                        color: '#fff',
+                        textDecoration: 'none',
+                        padding: '4px 2px',
+                        borderRadius: '4px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Netflix <ExternalLink size={10} />
+                    </a>
+
+                    <a
+                      href={`https://www.hotstar.com/in/explore?search_query=${encodeURIComponent(selectedMovie?.Title || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        background: '#0c1a30',
+                        border: '1px solid #1f80e0',
+                        color: '#38bdf8',
+                        textDecoration: 'none',
+                        padding: '4px 2px',
+                        borderRadius: '4px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Hotstar <ExternalLink size={10} />
+                    </a>
+
+                    <a
+                      href={`https://tv.apple.com/search?term=${encodeURIComponent(selectedMovie?.Title || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        background: '#27272a',
+                        color: '#fff',
+                        textDecoration: 'none',
+                        padding: '4px 2px',
+                        borderRadius: '4px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Apple TV <ExternalLink size={10} />
+                    </a>
+
                     <a
                       href={`https://www.justwatch.com/in/search?q=${encodeURIComponent(selectedMovie?.Title || '')}`}
                       target="_blank"
@@ -1250,18 +1348,21 @@ export default function App() {
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '4px',
                         background: '#f59e0b',
                         color: '#000',
                         textDecoration: 'none',
-                        padding: '3px 8px',
+                        padding: '4px 2px',
                         borderRadius: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: 700
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       JustWatch <ExternalLink size={10} />
                     </a>
+
                     <a
                       href={`https://www.google.com/search?q=where+to+watch+${encodeURIComponent(selectedMovie?.Title || '')}+movie`}
                       target="_blank"
@@ -1269,14 +1370,16 @@ export default function App() {
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '4px',
                         background: '#2563eb',
                         color: '#fff',
                         textDecoration: 'none',
-                        padding: '3px 8px',
+                        padding: '4px 2px',
                         borderRadius: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: 700
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       Google Watch <ExternalLink size={10} />
