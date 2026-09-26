@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
   <head>
@@ -48,6 +47,22 @@
     <!-- Google AdSense Script -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6812126327266180"
      crossorigin="anonymous"></script>
+
+    <!-- Structured Data (JSON-LD Schema) for Google Rich Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "CineTrack",
+      "url": "https://cinetrack-eta-ten.vercel.app/",
+      "description": "Discover Trending Cinema, Official Trailers & Track Your Personal Watchlist.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://cinetrack-eta-ten.vercel.app/?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
   </head>
   <body style="margin: 0; padding: 0; background-color: #070b13; overflow-x: hidden;">
     <div id="root"></div>
