@@ -141,7 +141,7 @@ body {
   gap: 6px;
 }
 
-/* Cards Grid (2 Equal Columns Mobile Fix) */
+/* Cards Grid (2-Column Mobile Fix) */
 .section-title {
   font-size: 1.1rem;
   font-weight: 800;
@@ -268,6 +268,32 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Native Ad Card */
+.native-ad-card {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(7, 11, 19, 0.95));
+  border: 1px dashed rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+
+.ad-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 0.62rem;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
 }
 
 .no-scrollbar::-webkit-scrollbar {
