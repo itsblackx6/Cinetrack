@@ -312,7 +312,7 @@ function CineTrackApp() {
     } else if (activeTab === 'watchlist') {
       document.title = `My Watchlist (${watchlist.length}) • CineTrack`;
     } else {
-      document.title = '𝓜𝓮𝓮𝓷𝓪⚡ • Official Cinema Discovery';
+      document.title = '𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 • Official Cinema Discovery';
     }
 
     if (selectedMovie || activeTrailer || activeLegalModal) {
@@ -691,13 +691,15 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* Top Navbar with Golden 𝓜𝓮𝓮𝓷𝓪⚡ */}
+      {/* Top Navbar with 𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 */}
       <header className="navbar">
         <div 
           className="meena-brand" 
           onClick={() => { setActiveTab('explore'); clearSearch(); }}
         >
-          𝓜𝓮𝓮𝓷𝓪⚡
+          <span className="brand-meena">𝓜𝓮𝓮𝓷𝓪⚡</span>
+          <span className="brand-cross">×</span>
+          <span className="brand-cinetrack">𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴</span>
         </div>
 
         <div className="nav-actions">
@@ -765,7 +767,7 @@ function CineTrackApp() {
 
       <main className="container" style={{ flex: 1 }}>
         
-        {/* Dynamic Netflix-Style Billboard (Replacing Static CineTrack Title) */}
+        {/* Dynamic Netflix-Style Billboard */}
         {activeTab === 'explore' && !searchQuery && heroMovie && (
           <div className="hero-billboard" onClick={() => openMovieDetails(heroMovie)}>
             <div className="hero-backdrop-wrapper">
