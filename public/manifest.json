@@ -1,0 +1,24 @@
+{
+  "name": "CineTrack • Official Cinema & Watchlist",
+  "short_name": "CineTrack",
+  "description": "Discover Trending Cinema, Official Trailers & Personal Watchlist",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b13",
+  "theme_color": "#070b13",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
