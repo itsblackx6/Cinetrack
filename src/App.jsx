@@ -3,7 +3,7 @@ import {
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, Eye, AlertCircle, Play, 
   CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard, Sparkles, ShieldCheck, Mail, Info, FileText
+  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard, Sparkles, ShieldCheck, Mail, Info, FileText, Dices
 } from 'lucide-react';
 import './App.css';
 
@@ -207,11 +207,14 @@ function CineTrackApp() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [activeTrailer, setActiveTrailer] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPaginating, setIsPaginating] = useState(false);
+  const [page, setPage] = useState(1);
   const [errorMessage, setErrorMessage] = useState(null);
   const [activeTab, setActiveTab] = useState('explore');
   const [watchlistFilter, setWatchlistFilter] = useState('All');
   const [toastMessage, setToastMessage] = useState(null);
   const [activeLegalModal, setActiveLegalModal] = useState(null);
+  const [liveWatchProviders, setLiveWatchProviders] = useState([]);
 
   const cacheRef = useRef({});
   const searchTimeoutRef = useRef(null);
@@ -227,7 +230,7 @@ function CineTrackApp() {
     }
   });
 
-  // Watchlist Sync to LocalStorage (Crash-Proof)
+  // Watchlist Sync to LocalStorage
   useEffect(() => {
     try {
       const cleanList = (watchlist || []).slice(0, 150).map(m => ({
@@ -333,46 +336,76 @@ function CineTrackApp() {
     };
   }, []);
 
-  const fetchCategoryMovies = useCallback(async (genre) => {
-    if (cacheRef.current[genre]) {
+  const fetchCategoryMovies = useCallback(async (genre, pageNum = 1, append = false) => {
+    if (pageNum === 1 && cacheRef.current[genre] && !append) {
       setMovies(cacheRef.current[genre]);
       return;
     }
 
-    setIsLoading(true);
+    if (pageNum === 1) {
+      setIsLoading(true);
+    } else {
+      setIsPaginating(true);
+    }
     setErrorMessage(null);
 
     try {
       const endpoint = genre === 'Trending'
-        ? `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`
-        : `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${GENRE_MAP[genre]}&sort_by=popularity.desc`;
+        ? `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=${pageNum}`
+        : `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${GENRE_MAP[genre]}&sort_by=popularity.desc&page=${pageNum}`;
 
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error('API request failed');
       const data = await res.json();
       if (data && data.results && data.results.length > 0) {
-        const formatted = data.results.slice(0, 24).map(formatTmdbMovie);
-        cacheRef.current[genre] = formatted;
-        setMovies(formatted);
+        const formatted = data.results.map(formatTmdbMovie);
+        if (append) {
+          setMovies(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const newOnes = formatted.filter(m => !existingIds.has(m.id));
+            return [...prev, ...newOnes];
+          });
+        } else {
+          cacheRef.current[genre] = formatted;
+          setMovies(formatted);
+        }
       } else {
-        setMovies(INITIAL_POPULAR);
+        if (!append) setMovies(INITIAL_POPULAR);
       }
     } catch {
-      setMovies(INITIAL_POPULAR);
+      if (!append) setMovies(INITIAL_POPULAR);
     } finally {
       setIsLoading(false);
+      setIsPaginating(false);
     }
   }, [formatTmdbMovie]);
 
   useEffect(() => {
-    fetchCategoryMovies('Trending');
+    fetchCategoryMovies('Trending', 1);
   }, [fetchCategoryMovies]);
+
+  // Load More Handler (Pagination)
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchCategoryMovies(selectedGenre, nextPage, true);
+  };
+
+  // Surprise Me Functionality (One-Tap Blockbuster Selection)
+  const handleSurpriseMe = () => {
+    if (movies.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * movies.length);
+    const luckyMovie = movies[randomIndex];
+    showToast(`🎲 Surprise: ${luckyMovie.Title}!`);
+    openMovieDetails(luckyMovie);
+  };
 
   // Execute TMDB Search API
   const executeSearch = useCallback(async (rawQuery) => {
     const query = (rawQuery || '').trim();
     if (!query) {
-      fetchCategoryMovies(selectedGenre);
+      setPage(1);
+      fetchCategoryMovies(selectedGenre, 1);
       return;
     }
 
@@ -400,7 +433,6 @@ function CineTrackApp() {
     }
   }, [selectedGenre, fetchCategoryMovies, formatTmdbMovie]);
 
-  // Real-Time Debounced Search Input Handler
   const handleSearchChange = (val) => {
     setSearchQuery(val);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -418,35 +450,65 @@ function CineTrackApp() {
   const handleGenreChange = (genre) => {
     setSelectedGenre(genre);
     setSearchQuery('');
+    setPage(1);
     setFilterTopRatedOnly(false);
-    fetchCategoryMovies(genre);
+    fetchCategoryMovies(genre, 1);
   };
 
   const clearSearch = () => {
     setSearchQuery('');
+    setPage(1);
     handleGenreChange('Trending');
   };
 
+  // Fetch Movie Details & Live India Watch Providers
   const openMovieDetails = async (movie) => {
     setSelectedMovie(movie);
-    try {
-      const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
-      if (!res.ok) return;
-      const details = await res.json();
-      if (details) {
-        const genres = details.genres ? details.genres.map(g => g.name).join(', ') : movie.Genre;
-        const directorObj = details.credits?.crew?.find(c => c.job === 'Director');
-        const castStr = details.credits?.cast ? details.credits.cast.slice(0, 4).map(c => c.name).join(', ') : movie.Actors;
-        const runtimeStr = details.runtime ? `${details.runtime} min` : movie.Runtime;
+    setLiveWatchProviders([]);
 
-        setSelectedMovie(prev => ({
-          ...prev,
-          Genre: genres,
-          Director: directorObj ? directorObj.name : 'Not Specified',
-          Actors: castStr,
-          Runtime: runtimeStr,
-          Plot: details.overview || prev.Plot
-        }));
+    try {
+      // 1. Fetch Credits & Extended Info
+      const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
+      if (res.ok) {
+        const details = await res.json();
+        if (details) {
+          const genres = details.genres ? details.genres.map(g => g.name).join(', ') : movie.Genre;
+          const directorObj = details.credits?.crew?.find(c => c.job === 'Director');
+          const castStr = details.credits?.cast ? details.credits.cast.slice(0, 4).map(c => c.name).join(', ') : movie.Actors;
+          const runtimeStr = details.runtime ? `${details.runtime} min` : movie.Runtime;
+
+          setSelectedMovie(prev => ({
+            ...prev,
+            Genre: genres,
+            Director: directorObj ? directorObj.name : 'Not Specified',
+            Actors: castStr,
+            Runtime: runtimeStr,
+            Plot: details.overview || prev.Plot
+          }));
+        }
+      }
+
+      // 2. Fetch Live India (IN) Watch Providers
+      const provRes = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/watch/providers?api_key=${TMDB_API_KEY}`);
+      if (provRes.ok) {
+        const provData = await provRes.json();
+        const inProviders = provData?.results?.IN;
+        const flatProviders = [
+          ...(inProviders?.flatrate || []),
+          ...(inProviders?.rent || []),
+          ...(inProviders?.buy || [])
+        ];
+        
+        // Remove duplicate provider names
+        const uniqueProviders = [];
+        const seen = new Set();
+        for (const p of flatProviders) {
+          if (!seen.has(p.provider_name)) {
+            seen.add(p.provider_name);
+            uniqueProviders.push(p);
+          }
+        }
+        setLiveWatchProviders(uniqueProviders.slice(0, 4));
       }
     } catch {
       // Safe fallback
@@ -627,6 +689,28 @@ function CineTrackApp() {
         </div>
 
         <div className="nav-actions">
+          {/* Surprise Me Header Button */}
+          <button
+            onClick={handleSurpriseMe}
+            title="Pick a random top movie!"
+            style={{
+              background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.18), rgba(249, 115, 22, 0.2))',
+              border: '1px solid rgba(234, 179, 8, 0.45)',
+              borderRadius: '20px',
+              color: '#facc15',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '5px 11px'
+            }}
+          >
+            <Dices size={14} color="#facc15" />
+            <span>Surprise Me</span>
+          </button>
+
           <button
             onClick={() => {
               setActiveTab('explore');
@@ -718,32 +802,52 @@ function CineTrackApp() {
               Curate your cinema watchlist, watch official HD trailers, and track verified global ratings.
             </p>
 
-            {movies.length > 0 && (
-              <div 
-                onClick={() => openMovieDetails(movies[0])}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
+              {movies.length > 0 && (
+                <div 
+                  onClick={() => openMovieDetails(movies[0])}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(15, 23, 42, 0.75)',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                    padding: '6px 14px',
+                    borderRadius: '30px',
+                    fontSize: '0.78rem',
+                    color: '#e2e8f0',
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                >
+                  <span style={{ background: '#f5c518', color: '#000', fontWeight: 800, padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
+                    ⭐ {movies[0].imdbRating}
+                  </span>
+                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>Spotlight:</span> {movies[0].Title} ({movies[0].Year}) 
+                  <Eye size={13} color="#38bdf8" />
+                </div>
+              )}
+
+              <button
+                onClick={handleSurpriseMe}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(15, 23, 42, 0.75)',
-                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  gap: '6px',
+                  background: 'rgba(234, 179, 8, 0.15)',
+                  border: '1px solid rgba(234, 179, 8, 0.35)',
                   padding: '6px 14px',
                   borderRadius: '30px',
                   fontSize: '0.78rem',
-                  color: '#e2e8f0',
+                  color: '#facc15',
                   cursor: 'pointer',
-                  position: 'relative',
-                  zIndex: 1,
+                  fontWeight: 700,
                   backdropFilter: 'blur(10px)'
                 }}
               >
-                <span style={{ background: '#f5c518', color: '#000', fontWeight: 800, padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
-                  ⭐ {movies[0].imdbRating}
-                </span>
-                <span style={{ color: '#38bdf8', fontWeight: 700 }}>Spotlight:</span> {movies[0].Title} ({movies[0].Year}) 
-                <Eye size={13} color="#38bdf8" />
-              </div>
-            )}
+                <Sparkles size={13} color="#facc15" /> Can't decide? Surprise Me
+              </button>
+            </div>
           </section>
         )}
 
@@ -1199,6 +1303,39 @@ function CineTrackApp() {
               ))}
             </div>
           )}
+
+          {/* Load More Pagination Button */}
+          {activeTab === 'explore' && !searchQuery && displayedMovies.length > 0 && (
+            <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+              <button
+                onClick={handleLoadMore}
+                disabled={isPaginating}
+                style={{
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  color: '#38bdf8',
+                  padding: '10px 24px',
+                  borderRadius: '24px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: isPaginating ? 'wait' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                {isPaginating ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" /> Fetching Cinema...
+                  </>
+                ) : (
+                  <>
+                    <Film size={14} /> Load More Blockbusters
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </section>
       </main>
 
@@ -1422,7 +1559,7 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* Movie Details Modal */}
+      {/* Movie Details Modal with Live OTT Providers */}
       {selectedMovie && !activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1504,12 +1641,37 @@ function CineTrackApp() {
                   </div>
                 </div>
 
-                {/* Where to Watch */}
+                {/* Where to Watch & Live Providers */}
                 <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
-                    <Tv size={13} /> OFFICIAL STREAMING & RENTALS
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Tv size={13} /> OFFICIAL STREAMING & RENTALS
+                    </div>
+                    {liveWatchProviders.length > 0 && (
+                      <span style={{ color: '#4ade80', fontSize: '0.64rem', background: 'rgba(74, 222, 128, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                        ● Verified in India
+                      </span>
+                    )}
                   </div>
+
+                  {/* TMDB Live Providers Badges (If Available) */}
+                  {liveWatchProviders.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px dashed rgba(255,255,255,0.08)' }}>
+                      <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>Live on:</span>
+                      {liveWatchProviders.map((p) => (
+                        <div key={p.provider_id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.07)', padding: '2px 6px', borderRadius: '4px' }}>
+                          <img 
+                            src={`${IMAGE_BASE_URL}${p.logo_path}`} 
+                            alt={p.provider_name} 
+                            style={{ width: '14px', height: '14px', borderRadius: '2px' }} 
+                          />
+                          <span style={{ fontSize: '0.66rem', color: '#f8fafc', fontWeight: 600 }}>{p.provider_name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
+                  {/* Fallback Direct OTT Search Links */}
                   <div style={{ 
                     display: 'grid', 
                     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', 
