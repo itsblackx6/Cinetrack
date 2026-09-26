@@ -28,17 +28,33 @@ body {
 }
 
 .meena-brand {
-  font-size: 1.35rem;
-  font-weight: 900;
-  letter-spacing: 0.5px;
-  background: linear-gradient(135deg, #FFF099 0%, #F59E0B 50%, #D97706 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.45));
   display: flex;
   align-items: center;
+  gap: 5px;
+  font-size: 1rem;
+  font-weight: 900;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
+}
+
+.brand-meena {
+  background: linear-gradient(135deg, #f472b6 0%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.75));
+}
+
+.brand-cross {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0 1px;
+}
+
+.brand-cinetrack {
+  color: #38bdf8;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.75));
 }
 
 .nav-actions {
