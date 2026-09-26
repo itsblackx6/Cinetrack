@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, Component } from 'react';
 import { 
   Plus, Check, Star, Search, Film, X, Bookmark, 
-  RefreshCw, Eye, AlertCircle, Play, 
-  CheckCircle2, Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Share2, Award, Clapperboard, Sparkles, ShieldCheck, Mail, Info, FileText, Dices
+  RefreshCw, AlertCircle, Play, 
+  Trash2, ExternalLink, Download, 
+  ArrowUpDown, Tv, Flame, Share2, Award, Sparkles, ShieldCheck, Mail, Info, FileText, Dices, CheckCircle2
 } from 'lucide-react';
 import './App.css';
 
@@ -102,111 +102,13 @@ const INITIAL_POPULAR = [
     Actors: "Christian Bale, Heath Ledger",
     Director: "Christopher Nolan",
     Runtime: "152 min"
-  },
-  {
-    id: 693134,
-    Title: "Dune: Part Two",
-    Year: "2024",
-    imdbRating: "8.6",
-    Poster: "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
-    Backdrop: "https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s520Hgq.jpg",
-    Plot: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.",
-    Genre: "Sci-Fi, Adventure",
-    Actors: "Timothée Chalamet, Zendaya",
-    Director: "Denis Villeneuve",
-    Runtime: "166 min"
-  },
-  {
-    id: 27205,
-    Title: "Inception",
-    Year: "2010",
-    imdbRating: "8.8",
-    Poster: "https://image.tmdb.org/t/p/w500/ljsZTbVsrQSqZgWeep2B1QiDKuh.jpg",
-    Backdrop: "https://image.tmdb.org/t/p/w780/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg",
-    Plot: "A thief who steals corporate secrets through dream-sharing technology is given the task of planting an idea into a CEO's mind.",
-    Genre: "Action, Sci-Fi, Adventure",
-    Actors: "Leonardo DiCaprio, Joseph Gordon-Levitt",
-    Director: "Christopher Nolan",
-    Runtime: "148 min"
-  },
-  {
-    id: 299536,
-    Title: "Avengers: Infinity War",
-    Year: "2018",
-    imdbRating: "8.4",
-    Poster: "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
-    Backdrop: "https://image.tmdb.org/t/p/w780/mDfJG3LC3Dqb67AZ52x3Z0jDV0Q.jpg",
-    Plot: "The Avengers and their allies must be willing to sacrifice all in an attempt to defeat the powerful Thanos.",
-    Genre: "Action, Adventure, Sci-Fi",
-    Actors: "Robert Downey Jr., Chris Hemsworth",
-    Director: "Anthony Russo, Joe Russo",
-    Runtime: "149 min"
-  },
-  {
-    id: 569094,
-    Title: "Spider-Man: Across the Spider-Verse",
-    Year: "2023",
-    imdbRating: "8.7",
-    Poster: "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
-    Backdrop: "https://image.tmdb.org/t/p/w780/4HodYYKEIsGOdinkGi2Ucz6X9i0.jpg",
-    Plot: "Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its existence.",
-    Genre: "Animation, Action, Adventure",
-    Actors: "Shameik Moore, Hailee Steinfeld",
-    Director: "Joaquim Dos Santos",
-    Runtime: "140 min"
-  },
-  {
-    id: 424,
-    Title: "Schindler's List",
-    Year: "1993",
-    imdbRating: "9.0",
-    Poster: "https://upload.wikimedia.org/wikipedia/en/3/38/Schindler%27s_List_movie.jpg",
-    Backdrop: "https://image.tmdb.org/t/p/w780/zb6fM1CX41E9r6aoRdSrjZleDho.jpg",
-    Plot: "In German-occupied Poland during World War II, industrialist Oskar Schindler gradually becomes concerned for his Jewish workforce.",
-    Genre: "Drama, History",
-    Actors: "Liam Neeson, Ben Kingsley",
-    Director: "Steven Spielberg",
-    Runtime: "195 min"
-  },
-  {
-    id: 766,
-    Title: "Avatar",
-    Year: "2009",
-    imdbRating: "7.9",
-    Poster: "https://image.tmdb.org/t/p/w500/kyeqWdyUXW608qlYkRqosgbbJyK.jpg",
-    Backdrop: "https://image.tmdb.org/t/p/w780/vL5LR6WdxWPjC3D4d3f3fXJ5m2G.jpg",
-    Plot: "A paraplegic Marine dispatched to the moon Pandora on a unique mission becomes torn between following orders and protecting an alien civilization.",
-    Genre: "Action, Adventure, Fantasy",
-    Actors: "Sam Worthington, Zoe Saldana",
-    Director: "James Cameron",
-    Runtime: "162 min"
-  },
-  {
-    id: 98,
-    Title: "Gladiator",
-    Year: "2000",
-    imdbRating: "8.5",
-    Poster: "https://image.tmdb.org/t/p/w500/ty8TGRuvJLPUmAR1H1nRIsgwvim.jpg",
-    Backdrop: "https://image.tmdb.org/t/p/w780/b85ha2jM0v0F7r7e8EaR9sF1m.jpg",
-    Plot: "A former Roman General sets out to exact vengeance against the corrupt emperor who murdered his family and sent him into slavery.",
-    Genre: "Action, Drama, Adventure",
-    Actors: "Russell Crowe, Joaquin Phoenix",
-    Director: "Ridley Scott",
-    Runtime: "155 min"
   }
 ];
 
 const STATIC_TRAILERS = {
   157336: 'zSWdZVtXT7E',
   872585: 'uYPbbksJxIg',
-  155: 'EXeTwQWrcwY',
-  693134: 'Way9Dexny3w',
-  27205: 'YoHD9XEInc0',
-  299536: '6ZfuNTqbHE8',
-  569094: 'cqGjhVJWtEg',
-  424: 'gG22XNhtnoY',
-  766: '5PSNL1qE6VY',
-  98: 'P5ieIbInFpg'
+  155: 'EXeTwQWrcwY'
 };
 
 function CineTrackApp() {
@@ -258,7 +160,7 @@ function CineTrackApp() {
       }));
       localStorage.setItem('cinetrack_pro_v2_watchlist', JSON.stringify(cleanList));
     } catch (err) {
-      console.warn("Storage Quota or Access Guard:", err);
+      console.warn("Storage Quota Guard:", err);
     }
   }, [watchlist]);
 
@@ -512,7 +414,6 @@ function CineTrackApp() {
           ...(inProviders?.buy || [])
         ];
         
-        // Remove duplicate provider names
         const uniqueProviders = [];
         const seen = new Set();
         for (const p of flatProviders) {
@@ -691,7 +592,7 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* Top Navbar with 𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 */}
+      {/* Top Navbar with 𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 (Clean, Zero-Overlap) */}
       <header className="navbar">
         <div 
           className="meena-brand" 
@@ -703,7 +604,7 @@ function CineTrackApp() {
         </div>
 
         <div className="nav-actions">
-          {/* Surprise Me Header Button */}
+          {/* Compact Surprise Icon Button */}
           <button
             onClick={handleSurpriseMe}
             title="Pick a random top movie!"
@@ -712,51 +613,32 @@ function CineTrackApp() {
               border: '1px solid rgba(234, 179, 8, 0.45)',
               borderRadius: '20px',
               color: '#facc15',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px 10px'
+            }}
+          >
+            <Dices size={16} color="#facc15" />
+          </button>
+
+          {/* Watchlist Counter Button */}
+          <button
+            onClick={() => setActiveTab(activeTab === 'watchlist' ? 'explore' : 'watchlist')}
+            style={{
+              background: activeTab === 'watchlist' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              borderRadius: '20px',
+              color: activeTab === 'watchlist' ? '#070b13' : '#cbd5e1',
               fontWeight: 700,
               cursor: 'pointer',
-              fontSize: '0.78rem',
+              fontSize: '0.76rem',
               display: 'flex',
               alignItems: 'center',
               gap: '5px',
-              padding: '5px 11px'
-            }}
-          >
-            <Dices size={14} color="#facc15" />
-            <span>Surprise Me</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('explore');
-              clearSearch();
-            }}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: activeTab === 'explore' ? '#38bdf8' : '#94a3b8',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              padding: '6px 8px'
-            }}
-          >
-            Explore
-          </button>
-
-          <button
-            onClick={() => setActiveTab('watchlist')}
-            style={{
-              background: 'rgba(56, 189, 248, 0.1)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
-              borderRadius: '20px',
-              color: activeTab === 'watchlist' ? '#38bdf8' : '#cbd5e1',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontSize: '0.8rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '5px 12px'
+              padding: '6px 11px',
+              whiteSpace: 'nowrap'
             }}
           >
             <Bookmark size={13} />
