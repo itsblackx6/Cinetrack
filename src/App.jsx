@@ -1691,15 +1691,19 @@ function CineTrackApp() {
                       href={`https://www.amazon.in/s?k=${encodeURIComponent(selectedMovie?.Title || '')}&i=instant-video&tag=cinetrack-21`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="affiliate-ott-btn"
                       style={{ 
-                        justifyContent: 'center', 
-                        padding: '4px 2px', 
-                        fontSize: '0.68rem', 
-                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '3px',
                         background: '#00A8E1',
                         color: '#ffffff',
-                        fontWeight: 700
+                        textDecoration: 'none',
+                        padding: '4px 2px',
+                        borderRadius: '4px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       Prime Video <ExternalLink size={10} />
