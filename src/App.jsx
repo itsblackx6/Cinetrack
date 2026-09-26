@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, Component } from 'react';
 import { 
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, Eye, AlertCircle, Play, 
@@ -7,6 +7,39 @@ import {
 } from 'lucide-react';
 import './App.css';
 
+// ---------------------- ERROR BOUNDARY (CRASH-PROOF) ----------------------
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("CineTrack Safe Recovery:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: '100vh', background: '#070b13', color: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+          <AlertCircle size={48} color="#ef4444" style={{ marginBottom: '16px' }} />
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Something went off-screen!</h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '400px', margin: '8px 0 20px 0' }}>CineTrack encountered an unexpected UI glitch. Don't worry, your watchlist is safe.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{ background: '#38bdf8', color: '#070b13', border: 'none', padding: '10px 22px', borderRadius: '24px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Reload CineTrack
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ---------------------- CONFIG & CONSTANTS ----------------------
 const TMDB_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TMDB_API_KEY) 
   ? import.meta.env.VITE_TMDB_API_KEY 
   : '588ffc2c74b931292b25441fe86747cc';
@@ -165,7 +198,7 @@ const STATIC_TRAILERS = {
   98: 'P5ieIbInFpg'
 };
 
-export default function App() {
+function CineTrackApp() {
   const [movies, setMovies] = useState(INITIAL_POPULAR);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('Trending');
@@ -181,7 +214,10 @@ export default function App() {
   const [activeLegalModal, setActiveLegalModal] = useState(null);
 
   const cacheRef = useRef({});
+  const searchTimeoutRef = useRef(null);
+  const pushedHistoryRef = useRef(false);
 
+  // Safe Watchlist Init
   const [watchlist, setWatchlist] = useState(() => {
     try {
       const saved = localStorage.getItem('cinetrack_pro_v2_watchlist');
@@ -191,22 +227,23 @@ export default function App() {
     }
   });
 
+  // Watchlist Sync to LocalStorage (Crash-Proof)
   useEffect(() => {
     try {
-      const cleanList = (watchlist || []).slice(0, 100).map(m => ({
+      const cleanList = (watchlist || []).slice(0, 150).map(m => ({
         id: m.id,
         Title: m.Title || 'Movie',
         Year: m.Year || '',
         imdbRating: m.imdbRating || '7.0',
         Poster: m.Poster || SVG_POSTER_PLACEHOLDER,
-        Plot: m.Plot ? m.Plot.slice(0, 220) : '',
+        Plot: m.Plot ? m.Plot.slice(0, 250) : '',
         Genre: m.Genre || 'Cinema',
         userStatus: m.userStatus || 'Plan to Watch',
         personalRating: m.personalRating || 0
       }));
       localStorage.setItem('cinetrack_pro_v2_watchlist', JSON.stringify(cleanList));
     } catch (err) {
-      console.warn("Storage write error:", err);
+      console.warn("Storage Quota or Access Guard:", err);
     }
   }, [watchlist]);
 
@@ -217,8 +254,7 @@ export default function App() {
     }, 2200);
   };
 
-  const pushedHistoryRef = useRef(false);
-
+  // Back Button Navigation for Modals
   useEffect(() => {
     const handlePopState = () => {
       pushedHistoryRef.current = false;
@@ -254,7 +290,16 @@ export default function App() {
     }
   };
 
+  // Dynamic Page Title & Scroll Lock
   useEffect(() => {
+    if (selectedMovie) {
+      document.title = `${selectedMovie.Title} • CineTrack`;
+    } else if (activeTab === 'watchlist') {
+      document.title = `My Watchlist (${watchlist.length}) • CineTrack`;
+    } else {
+      document.title = 'CineTrack • Official Cinema & Watchlist';
+    }
+
     if (selectedMovie || activeTrailer || activeLegalModal) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -270,7 +315,7 @@ export default function App() {
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedMovie, activeTrailer, activeLegalModal]);
+  }, [selectedMovie, activeTrailer, activeLegalModal, activeTab, watchlist.length]);
 
   const formatTmdbMovie = useCallback((item) => {
     const currentYear = new Date().getFullYear().toString();
@@ -323,11 +368,11 @@ export default function App() {
     fetchCategoryMovies('Trending');
   }, [fetchCategoryMovies]);
 
-  const handleSearch = async (e) => {
-    if (e) e.preventDefault();
-    const query = (searchQuery || '').trim();
+  // Execute TMDB Search API
+  const executeSearch = useCallback(async (rawQuery) => {
+    const query = (rawQuery || '').trim();
     if (!query) {
-      handleGenreChange('Trending');
+      fetchCategoryMovies(selectedGenre);
       return;
     }
 
@@ -353,6 +398,21 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  }, [selectedGenre, fetchCategoryMovies, formatTmdbMovie]);
+
+  // Real-Time Debounced Search Input Handler
+  const handleSearchChange = (val) => {
+    setSearchQuery(val);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      executeSearch(val);
+    }, 380);
+  };
+
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    executeSearch(searchQuery);
   };
 
   const handleGenreChange = (genre) => {
@@ -433,7 +493,7 @@ export default function App() {
       }
     } else {
       navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      showToast("Link & details copied to clipboard!");
+      showToast("Link copied to clipboard!");
     }
   };
 
@@ -443,7 +503,7 @@ export default function App() {
       return;
     }
     const movieTitles = watchlist.slice(0, 8).map((m, i) => `${i + 1}. ${m.Title} (${m.imdbRating}⭐)`).join('\n');
-    const shareMessage = `🍿 My Cinema Watchlist on CineTrack:\n\n${movieTitles}\n\nExplore and build yours on CineTrack: ${window.location.origin}`;
+    const shareMessage = `🍿 My Cinema Watchlist on CineTrack:\n\n${movieTitles}\n\nExplore on CineTrack: ${window.location.origin}`;
     
     if (navigator.share) {
       navigator.share({
@@ -453,7 +513,7 @@ export default function App() {
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(shareMessage);
-      showToast("Watchlist copied! Ready to share.");
+      showToast("Watchlist copied to share!");
     }
   };
 
@@ -527,7 +587,7 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: '#070b13', color: '#f8fafc' }}>
       
-      {/* Toast Notification Alert */}
+      {/* Toast Alert */}
       {toastMessage && (
         <div style={{
           position: 'fixed',
@@ -553,7 +613,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Modern Top Brand Navbar */}
+      {/* Top Navbar */}
       <header className="navbar">
         <div 
           className="nav-brand" 
@@ -609,7 +669,7 @@ export default function App() {
 
       <main className="container" style={{ flex: 1 }}>
         
-        {/* Hero Header */}
+        {/* Hero Section */}
         {activeTab === 'explore' && !searchQuery && (
           <section style={{
             textAlign: 'center',
@@ -687,7 +747,7 @@ export default function App() {
           </section>
         )}
 
-        {/* Watchlist Stats & Quick Share */}
+        {/* Watchlist Quick Stats */}
         {activeTab === 'watchlist' && (
           <div style={{
             marginTop: '1rem',
@@ -715,16 +775,16 @@ export default function App() {
           </div>
         )}
 
-        {/* Search Engine */}
+        {/* Real-time Debounced Search Bar */}
         {activeTab === 'explore' && (
-          <form onSubmit={handleSearch} className="search-wrapper">
+          <form onSubmit={handleSearchSubmit} className="search-wrapper">
             <div className="search-input-box">
               <Search size={16} color="#38bdf8" />
               <input
                 type="text"
                 placeholder="Search cinema (e.g. Inception, Batman, Dune)..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
               {searchQuery && (
                 <button
@@ -742,7 +802,7 @@ export default function App() {
           </form>
         )}
 
-        {/* Filters */}
+        {/* Filters and Sorting */}
         {activeTab === 'explore' && (
           <div style={{ margin: '0 0 1.2rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <div className="no-scrollbar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', flex: 1, paddingBottom: '4px' }}>
@@ -831,7 +891,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Watchlist Filter Buttons & Share Watchlist */}
+        {/* Watchlist Filter Controls */}
         {activeTab === 'watchlist' && (
           <div style={{ margin: '0.8rem 0 1.2rem 0', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -856,7 +916,6 @@ export default function App() {
             </div>
 
             <div style={{ display: 'flex', gap: '6px' }}>
-              {/* Share Watchlist to WhatsApp / Friends */}
               <button
                 onClick={handleShareFullWatchlist}
                 title="Share Watchlist"
@@ -924,7 +983,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Movies Grid */}
+        {/* Dynamic Movies Grid */}
         <section>
           <h2 className="section-title">
             {selectedGenre === 'Trending' ? <Flame size={18} color="#f97316" /> : <Film size={18} color="#38bdf8" />}
@@ -966,7 +1025,7 @@ export default function App() {
           ) : (
             <div className="card-grid">
               {displayedMovies.map((movie, idx) => (
-                <React.Fragment key={movie?.id || idx}>
+                <React.Fragment key={movie?.id ? `movie-${movie.id}` : `idx-${idx}`}>
                   <div
                     className="movie-card"
                     onClick={() => openMovieDetails(movie)}
@@ -998,7 +1057,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Quick HD Trailer Button */}
+                      {/* Instant HD Trailer Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1024,7 +1083,7 @@ export default function App() {
                         <Play size={12} fill="#ffffff" /> TRAILER
                       </button>
 
-                      {/* Watchlist Controls */}
+                      {/* Watchlist Rating & Status */}
                       {activeTab === 'watchlist' && (
                         <div style={{ margin: '6px 0 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
@@ -1116,7 +1175,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Native Affiliate Card */}
+                  {/* Native Affiliate Placement */}
                   {activeTab === 'explore' && idx === 5 && (
                     <div className="native-ad-card">
                       <span className="ad-badge">SPONSORED</span>
@@ -1143,7 +1202,7 @@ export default function App() {
         </section>
       </main>
 
-      {/* AdSense Compliant Footer with Legal Links & Modals */}
+      {/* AdSense Legal Footer */}
       <footer
         style={{
           marginTop: 'auto',
@@ -1157,7 +1216,6 @@ export default function App() {
       >
         <div style={{ maxWidth: '720px', margin: '0 auto 16px auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           
-          {/* Quick Legal & Support Links (Crucial for AdSense Approval) */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '18px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setActiveLegalModal('privacy')}
@@ -1190,7 +1248,7 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Legal Popups Modal (Privacy Policy, About Us, Contact Us) */}
+      {/* Compliance Legal Modals */}
       {activeLegalModal && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
@@ -1299,7 +1357,7 @@ export default function App() {
         </div>
       )}
 
-      {/* YouTube Trailer Modal */}
+      {/* YouTube HD Trailer Modal */}
       {activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
@@ -1353,7 +1411,7 @@ export default function App() {
 
             <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000' }}>
               <iframe
-                src={`https://www.youtube-nocookie.com/embed/${activeTrailer.videoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`}
+                src={`https://www.youtube-nocookie.com/embed/${activeTrailer.videoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`}
                 title={`${activeTrailer.title} Trailer`}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -1364,7 +1422,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Details Popup Modal */}
+      {/* Movie Details Modal */}
       {selectedMovie && !activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1458,7 +1516,6 @@ export default function App() {
                     gap: '6px', 
                     width: '100%' 
                   }}>
-                    {/* Amazon Affiliate Link */}
                     <a
                       href={`https://www.amazon.in/s?k=${encodeURIComponent(selectedMovie?.Title || '')}&i=instant-video&tag=cinetrack-21`}
                       target="_blank"
@@ -1635,5 +1692,13 @@ export default function App() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <CineTrackApp />
+    </ErrorBoundary>
   );
 }
