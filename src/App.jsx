@@ -115,21 +115,21 @@ const STATIC_TRAILERS = {
 const DEFAULT_ALERTS = [
   {
     id: 'alt-1',
-    title: '🔥 Resident Evil (2026)',
-    desc: 'Official teaser and synopsis now live on CineTrack.',
+    title: '🔥 Trending Releases',
+    desc: 'Top verified 4K cinema blockbusters live on CineTrack.',
     time: 'Just now',
     type: 'trending'
   },
   {
     id: 'alt-2',
     title: '🍿 Streaming Alert',
-    desc: 'Top verified 4K blockbusters added for India OTTs.',
+    desc: 'Live streaming providers updated for India platforms.',
     time: '2h ago',
     type: 'ott'
   },
   {
     id: 'alt-3',
-    title: '⚡ Welcome to CineTrack',
+    title: '⚡ CineTrack Pro',
     desc: 'Tap 🎲 Surprise Me anytime to discover fresh cinema.',
     time: '1d ago',
     type: 'tip'
@@ -154,7 +154,7 @@ function CineTrackApp() {
   const [activeLegalModal, setActiveLegalModal] = useState(null);
   const [liveWatchProviders, setLiveWatchProviders] = useState([]);
 
-  // New States: Notifications & Micro-animations
+  // Notifications & Micro-animations
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState(DEFAULT_ALERTS);
   const [unreadCount, setUnreadCount] = useState(2);
@@ -258,7 +258,7 @@ function CineTrackApp() {
     } else if (activeTab === 'watchlist') {
       document.title = `My Watchlist (${watchlist.length}) • CineTrack`;
     } else {
-      document.title = '𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 • Official Cinema Discovery';
+      document.title = '𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴⚡ • Official Cinema Discovery';
     }
 
     if (selectedMovie || activeTrailer || activeLegalModal) {
@@ -549,7 +549,6 @@ function CineTrackApp() {
     } else {
       setWatchlist([...watchlist, { ...movie, userStatus: 'Plan to Watch', personalRating: 0 }]);
       showToast(`Added to Watchlist!`);
-      // Auto add gentle alert
       setNotifications(prev => [
         {
           id: `saved-${Date.now()}`,
@@ -607,7 +606,6 @@ function CineTrackApp() {
 
   const heroMovie = movies.length > 0 ? movies[0] : null;
 
-  // Filter list to avoid repeating the Hero movie in grid
   const displayedMovies = useMemo(() => {
     let list = activeTab === 'explore' 
       ? (!searchQuery && movies.length > 1 ? movies.slice(1) : movies)
@@ -657,7 +655,7 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* Top Navbar with 𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 & Neon Breathing Glow */}
+      {/* Top Navbar with 𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴⚡ */}
       <header className="navbar">
         <div 
           className="meena-brand" 
@@ -666,12 +664,12 @@ function CineTrackApp() {
         >
           <span className="brand-meena">𝓜𝓮𝓮𝓷𝓪⚡</span>
           <span className="brand-cross">×</span>
-          <span className="brand-cinetrack">𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴</span>
+          <span className="brand-cinetrack">𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴⚡</span>
         </div>
 
         <div className="nav-actions" style={{ position: 'relative' }}>
           
-          {/* Notification Bell Icon with Badge */}
+          {/* Notification Bell Icon */}
           <button
             onClick={handleToggleNotifications}
             title="Release Alerts"
@@ -1745,7 +1743,6 @@ function CineTrackApp() {
                     )}
                   </div>
 
-                  {/* TMDB Live Providers Badges (If Available) */}
                   {liveWatchProviders.length > 0 && (
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px dashed rgba(255,255,255,0.08)' }}>
                       <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>Live on:</span>
@@ -1762,7 +1759,7 @@ function CineTrackApp() {
                     </div>
                   )}
                   
-                  {/* Fallback Direct OTT Search Links */}
+                  {/* Direct OTT Search Links */}
                   <div style={{ 
                     display: 'grid', 
                     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', 
