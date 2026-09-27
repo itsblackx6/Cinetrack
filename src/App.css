@@ -60,15 +60,18 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
+/* Golden Collision Spark */
 .brand-cross {
-  color: #64748b;
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 0 1px;
+  color: #fbbf24;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 0 2px;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.75));
 }
 
 .brand-cinetrack {
   color: #38bdf8;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.75));
 }
 
 .nav-actions {
