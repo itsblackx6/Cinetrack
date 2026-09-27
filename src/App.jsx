@@ -3,7 +3,8 @@ import {
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, AlertCircle, Play, 
   Trash2, ExternalLink, Download, 
-  ArrowUpDown, Tv, Flame, Share2, Award, Sparkles, ShieldCheck, Mail, Info, FileText, Dices, CheckCircle2
+  ArrowUpDown, Tv, Flame, Share2, Award, Sparkles, ShieldCheck, Mail, Info, FileText, Dices, CheckCircle2,
+  Bell, ChevronUp, Clock, CheckCheck
 } from 'lucide-react';
 import './App.css';
 
@@ -111,6 +112,30 @@ const STATIC_TRAILERS = {
   155: 'EXeTwQWrcwY'
 };
 
+const DEFAULT_ALERTS = [
+  {
+    id: 'alt-1',
+    title: '🔥 Resident Evil (2026)',
+    desc: 'Official teaser and synopsis now live on CineTrack.',
+    time: 'Just now',
+    type: 'trending'
+  },
+  {
+    id: 'alt-2',
+    title: '🍿 Streaming Alert',
+    desc: 'Top verified 4K blockbusters added for India OTTs.',
+    time: '2h ago',
+    type: 'ott'
+  },
+  {
+    id: 'alt-3',
+    title: '⚡ Welcome to CineTrack',
+    desc: 'Tap 🎲 Surprise Me anytime to discover fresh cinema.',
+    time: '1d ago',
+    type: 'tip'
+  }
+];
+
 function CineTrackApp() {
   const [movies, setMovies] = useState(INITIAL_POPULAR);
   const [searchQuery, setSearchQuery] = useState('');
@@ -128,6 +153,13 @@ function CineTrackApp() {
   const [toastMessage, setToastMessage] = useState(null);
   const [activeLegalModal, setActiveLegalModal] = useState(null);
   const [liveWatchProviders, setLiveWatchProviders] = useState([]);
+
+  // New States: Notifications & Micro-animations
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState(DEFAULT_ALERTS);
+  const [unreadCount, setUnreadCount] = useState(2);
+  const [isSpinningDice, setIsSpinningDice] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const cacheRef = useRef({});
   const searchTimeoutRef = useRef(null);
@@ -164,6 +196,15 @@ function CineTrackApp() {
     }
   }, [watchlist]);
 
+  // Scroll Listener for Back-To-Top Button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -175,7 +216,9 @@ function CineTrackApp() {
   useEffect(() => {
     const handlePopState = () => {
       pushedHistoryRef.current = false;
-      if (activeTrailer) {
+      if (isNotificationsOpen) {
+        setIsNotificationsOpen(false);
+      } else if (activeTrailer) {
         setActiveTrailer(null);
       } else if (selectedMovie) {
         setSelectedMovie(null);
@@ -186,7 +229,7 @@ function CineTrackApp() {
       }
     };
 
-    if (activeTrailer || selectedMovie || activeLegalModal || activeTab === 'watchlist') {
+    if (activeTrailer || selectedMovie || activeLegalModal || activeTab === 'watchlist' || isNotificationsOpen) {
       window.history.pushState({ modalOrTab: true }, '');
       pushedHistoryRef.current = true;
     }
@@ -195,7 +238,7 @@ function CineTrackApp() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [activeTrailer, selectedMovie, activeLegalModal, activeTab]);
+  }, [activeTrailer, selectedMovie, activeLegalModal, activeTab, isNotificationsOpen]);
 
   const closeModalsSafely = () => {
     if (pushedHistoryRef.current) {
@@ -204,6 +247,7 @@ function CineTrackApp() {
       setActiveTrailer(null);
       setSelectedMovie(null);
       setActiveLegalModal(null);
+      setIsNotificationsOpen(false);
     }
   };
 
@@ -306,9 +350,12 @@ function CineTrackApp() {
     fetchCategoryMovies(selectedGenre, nextPage, true);
   };
 
-  // Surprise Me Functionality (One-Tap Blockbuster Selection)
+  // Surprise Me Functionality (With 360° Dice Spin Micro-animation)
   const handleSurpriseMe = () => {
     if (movies.length === 0) return;
+    setIsSpinningDice(true);
+    setTimeout(() => setIsSpinningDice(false), 550);
+
     const randomIndex = Math.floor(Math.random() * movies.length);
     const luckyMovie = movies[randomIndex];
     showToast(`🎲 Surprise: ${luckyMovie.Title}!`);
@@ -502,6 +549,17 @@ function CineTrackApp() {
     } else {
       setWatchlist([...watchlist, { ...movie, userStatus: 'Plan to Watch', personalRating: 0 }]);
       showToast(`Added to Watchlist!`);
+      // Auto add gentle alert
+      setNotifications(prev => [
+        {
+          id: `saved-${Date.now()}`,
+          title: `📌 Added: ${movie.Title}`,
+          desc: `Saved to your offline watchlist buffer.`,
+          time: 'Just now',
+          type: 'watchlist'
+        },
+        ...prev
+      ]);
     }
   };
 
@@ -530,6 +588,13 @@ function CineTrackApp() {
     downloadAnchor.click();
     downloadAnchor.remove();
     showToast("Watchlist backup downloaded!");
+  };
+
+  const handleToggleNotifications = () => {
+    setIsNotificationsOpen(!isNotificationsOpen);
+    if (!isNotificationsOpen) {
+      setUnreadCount(0);
+    }
   };
 
   const stats = useMemo(() => {
@@ -592,19 +657,62 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* Top Navbar with 𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 (Clean, Zero-Overlap) */}
+      {/* Top Navbar with 𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 & Neon Breathing Glow */}
       <header className="navbar">
         <div 
           className="meena-brand" 
           onClick={() => { setActiveTab('explore'); clearSearch(); }}
+          style={{ cursor: 'pointer' }}
         >
           <span className="brand-meena">𝓜𝓮𝓮𝓷𝓪⚡</span>
           <span className="brand-cross">×</span>
           <span className="brand-cinetrack">𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴</span>
         </div>
 
-        <div className="nav-actions">
-          {/* Compact Surprise Icon Button */}
+        <div className="nav-actions" style={{ position: 'relative' }}>
+          
+          {/* Notification Bell Icon with Badge */}
+          <button
+            onClick={handleToggleNotifications}
+            title="Release Alerts"
+            style={{
+              position: 'relative',
+              background: isNotificationsOpen ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              border: isNotificationsOpen ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '20px',
+              color: isNotificationsOpen ? '#38bdf8' : '#cbd5e1',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px 9px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Bell size={15} />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-3px',
+                right: '-3px',
+                background: '#ef4444',
+                color: '#fff',
+                fontSize: '0.58rem',
+                fontWeight: 900,
+                width: '15px',
+                height: '15px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 8px rgba(239, 68, 68, 0.8)'
+              }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Compact Surprise Icon Button with 360 Spin */}
           <button
             onClick={handleSurpriseMe}
             title="Pick a random top movie!"
@@ -620,7 +728,7 @@ function CineTrackApp() {
               padding: '6px 10px'
             }}
           >
-            <Dices size={16} color="#facc15" />
+            <Dices size={16} color="#facc15" className={isSpinningDice ? 'dice-spinning' : ''} />
           </button>
 
           {/* Watchlist Counter Button */}
@@ -644,6 +752,69 @@ function CineTrackApp() {
             <Bookmark size={13} />
             Watchlist ({watchlist.length})
           </button>
+
+          {/* Slide-out / Dropdown Notification Drawer */}
+          {isNotificationsOpen && (
+            <div 
+              className="notification-tray"
+              style={{
+                position: 'absolute',
+                top: '46px',
+                right: '0',
+                width: '290px',
+                background: 'rgba(15, 23, 42, 0.98)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(56, 189, 248, 0.25)',
+                borderRadius: '14px',
+                boxShadow: '0 16px 36px rgba(0,0,0,0.85)',
+                padding: '12px',
+                zIndex: 1100,
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 800, color: '#f8fafc' }}>
+                  <Bell size={13} color="#38bdf8" /> Release Alerts
+                </div>
+                <button
+                  onClick={() => setNotifications([])}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.66rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                >
+                  <CheckCheck size={11} /> Clear all
+                </button>
+              </div>
+
+              {notifications.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '16px 0', color: '#64748b', fontSize: '0.74rem' }}>
+                  No new release alerts today.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
+                  {notifications.map((n) => (
+                    <div 
+                      key={n.id}
+                      style={{
+                        padding: '8px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.05)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#f8fafc' }}>{n.title}</span>
+                        <span style={{ fontSize: '0.62rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <Clock size={10} /> {n.time}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.68rem', color: '#94a3b8', lineHeight: '1.3' }}>
+                        {n.desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -1231,6 +1402,33 @@ function CineTrackApp() {
           )}
         </section>
       </main>
+
+      {/* Floating Back to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '20px',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(56, 189, 248, 0.4)',
+            color: '#38bdf8',
+            borderRadius: '50%',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.5)',
+            cursor: 'pointer',
+            zIndex: 900
+          }}
+        >
+          <ChevronUp size={20} />
+        </button>
+      )}
 
       {/* AdSense Legal Footer */}
       <footer
