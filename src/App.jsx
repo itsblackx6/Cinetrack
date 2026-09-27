@@ -4,7 +4,7 @@ import {
   RefreshCw, AlertCircle, Play, 
   Trash2, ExternalLink, Download, 
   ArrowUpDown, Tv, Flame, Share2, Award, Sparkles, ShieldCheck, Mail, Info, FileText, Dices, CheckCircle2,
-  Bell, ChevronUp, Clock, CheckCheck
+  Bell, ChevronUp, Clock, CheckCheck, Zap
 } from 'lucide-react';
 import './App.css';
 
@@ -258,7 +258,7 @@ function CineTrackApp() {
     } else if (activeTab === 'watchlist') {
       document.title = `My Watchlist (${watchlist.length}) • CineTrack`;
     } else {
-      document.title = '𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴⚡ • Official Cinema Discovery';
+      document.title = '𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴 • Official Cinema Discovery';
     }
 
     if (selectedMovie || activeTrailer || activeLegalModal) {
@@ -429,7 +429,6 @@ function CineTrackApp() {
     setLiveWatchProviders([]);
 
     try {
-      // 1. Fetch Credits & Extended Info
       const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
       if (res.ok) {
         const details = await res.json();
@@ -450,7 +449,6 @@ function CineTrackApp() {
         }
       }
 
-      // 2. Fetch Live India (IN) Watch Providers
       const provRes = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/watch/providers?api_key=${TMDB_API_KEY}`);
       if (provRes.ok) {
         const provData = await provRes.json();
@@ -655,7 +653,7 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* Top Navbar with 𝓜𝓮𝓮𝓷𝓪⚡ × 𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴⚡ */}
+      {/* Top Navbar with Pure Neon Cyan Zap Icon for CineTrack */}
       <header className="navbar">
         <div 
           className="meena-brand" 
@@ -664,7 +662,18 @@ function CineTrackApp() {
         >
           <span className="brand-meena">𝓜𝓮𝓮𝓷𝓪⚡</span>
           <span className="brand-cross">×</span>
-          <span className="brand-cinetrack">𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴⚡</span>
+          <span className="brand-cinetrack">
+            𝓒𝓲𝓷𝓮𝓣𝓻𝓪𝓬𝓴
+            <Zap 
+              size={13} 
+              fill="#38bdf8" 
+              color="#38bdf8" 
+              style={{ 
+                marginLeft: '1px', 
+                filter: 'drop-shadow(0 0 5px rgba(56, 189, 248, 0.9))' 
+              }} 
+            />
+          </span>
         </div>
 
         <div className="nav-actions" style={{ position: 'relative' }}>
@@ -751,7 +760,7 @@ function CineTrackApp() {
             Watchlist ({watchlist.length})
           </button>
 
-          {/* Slide-out / Dropdown Notification Drawer */}
+          {/* Slide-out Notification Drawer */}
           {isNotificationsOpen && (
             <div 
               className="notification-tray"
