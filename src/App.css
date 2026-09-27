@@ -13,7 +13,7 @@ body {
   width: 100%;
 }
 
-/* Navbar */
+/* ================= NAVBAR & NEON BRANDING ================= */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -27,6 +27,16 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Breathing Neon Brand Glow */
+@keyframes neonPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(244, 114, 182, 0.45)) drop-shadow(0 0 12px rgba(56, 189, 248, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(244, 114, 182, 0.85)) drop-shadow(0 0 24px rgba(56, 189, 248, 0.7));
+  }
+}
+
 .meena-brand {
   display: flex;
   align-items: center;
@@ -36,13 +46,18 @@ body {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  animation: neonPulse 3.5s ease-in-out infinite;
+  transition: transform 0.2s ease;
+}
+
+.meena-brand:active {
+  transform: scale(0.96);
 }
 
 .brand-meena {
   background: linear-gradient(135deg, #f472b6 0%, #c084fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.75));
 }
 
 .brand-cross {
@@ -54,16 +69,43 @@ body {
 
 .brand-cinetrack {
   color: #38bdf8;
-  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.75));
 }
 
 .nav-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
 }
 
-/* Hero Billboard */
+/* 360 Degree Smooth Dice Spin */
+@keyframes diceSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.25); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.dice-spinning {
+  animation: diceSpin 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Notification Drawer Animation */
+@keyframes traySlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.notification-tray {
+  animation: traySlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ================= HERO BILLBOARD ================= */
 .hero-billboard {
   position: relative;
   width: 100%;
@@ -74,6 +116,11 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
   cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hero-billboard:hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85), 0 0 20px rgba(56, 189, 248, 0.15);
 }
 
 .hero-backdrop-wrapper {
@@ -107,7 +154,7 @@ body {
   gap: 6px;
 }
 
-/* Container */
+/* ================= CONTAINER & SEARCH ================= */
 .container {
   width: 100%;
   max-width: 1200px;
@@ -115,7 +162,6 @@ body {
   padding: 0 12px 40px 12px;
 }
 
-/* Search Wrapper */
 .search-wrapper {
   display: flex;
   gap: 8px;
@@ -132,6 +178,12 @@ body {
   border-radius: 10px;
   padding: 8px 12px;
   gap: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-input-box:focus-within {
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
 .search-input-box input {
@@ -155,9 +207,14 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
 
-/* Cards Grid (2-Column Mobile Fix) */
+.btn-primary:active {
+  transform: scale(0.96);
+}
+
+/* ================= CARDS GRID (MOBILE 2-COLUMN FIX) ================= */
 .section-title {
   font-size: 1.1rem;
   font-weight: 800;
@@ -189,6 +246,7 @@ body {
   }
 }
 
+/* Micro-interaction: Movie Card Floating Lift */
 .movie-card {
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -199,13 +257,25 @@ body {
   flex-direction: column;
   width: 100%;
   cursor: pointer;
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.24s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.24s ease;
+  will-change: transform;
+}
+
+.movie-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.75), 0 0 18px rgba(56, 189, 248, 0.2);
+}
+
+.movie-card:active {
+  transform: scale(0.98);
 }
 
 .rating-badge {
   position: absolute;
   top: 6px;
   right: 6px;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.82);
   backdrop-filter: blur(4px);
   padding: 2px 5px;
   border-radius: 4px;
@@ -244,17 +314,29 @@ body {
   white-space: nowrap;
 }
 
-/* Modals */
+/* ================= MODALS & POPUPS ================= */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 16px;
+}
+
+/* Smooth Modal Slide-Up Animation */
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-content {
@@ -266,6 +348,7 @@ body {
   max-height: 88vh;
   overflow-y: auto;
   position: relative;
+  animation: modalSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-body {
@@ -286,7 +369,7 @@ body {
   gap: 8px;
 }
 
-/* Native Ad Card */
+/* ================= NATIVE AD / AFFILIATE ================= */
 .native-ad-card {
   background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(7, 11, 19, 0.95));
   border: 1px dashed rgba(56, 189, 248, 0.35);
@@ -298,6 +381,11 @@ body {
   justify-content: center;
   text-align: center;
   position: relative;
+  transition: transform 0.2s ease;
+}
+
+.native-ad-card:hover {
+  transform: translateY(-3px);
 }
 
 .ad-badge {
@@ -312,10 +400,20 @@ body {
   font-weight: 700;
 }
 
+/* ================= UTILITIES & HELPERS ================= */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
