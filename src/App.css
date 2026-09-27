@@ -71,6 +71,8 @@ body {
 
 .brand-cinetrack {
   color: #38bdf8;
+  display: inline-flex;
+  align-items: center;
   filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.75));
 }
 
