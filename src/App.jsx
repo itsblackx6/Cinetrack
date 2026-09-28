@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, Component } f
 import { 
   Plus, Check, Star, Search, Film, X, Bookmark, 
   RefreshCw, AlertCircle, Play, 
-  Trash2, ExternalLink, Download, 
+  Trash2, ExternalLink, Download, Upload,
   ArrowUpDown, Tv, Flame, Share2, Award, Sparkles, ShieldCheck, Mail, Info, FileText, Dices, CheckCircle2,
   Bell, ChevronUp, Clock, CheckCheck, Zap
 } from 'lucide-react';
 import './App.css';
 
-// ---------------------- ERROR BOUNDARY ----------------------
+// ---------------------- 1. BULLETPROOF ERROR BOUNDARY ----------------------
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -40,7 +40,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-// ---------------------- CONFIG & CONSTANTS ----------------------
+// ---------------------- 2. ENVIRONMENT SECURE CONSTANTS ----------------------
 const TMDB_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TMDB_API_KEY) 
   ? import.meta.env.VITE_TMDB_API_KEY 
   : '588ffc2c74b931292b25441fe86747cc';
@@ -67,6 +67,7 @@ const GENRE_TAGS = ['Trending', 'Sci-Fi', 'Action', 'Adventure', 'Drama', 'Anima
 const INITIAL_POPULAR = [
   {
     id: 157336,
+    mediaType: 'movie',
     Title: "Interstellar",
     Year: "2014",
     imdbRating: "8.7",
@@ -80,6 +81,7 @@ const INITIAL_POPULAR = [
   },
   {
     id: 872585,
+    mediaType: 'movie',
     Title: "Oppenheimer",
     Year: "2023",
     imdbRating: "8.9",
@@ -93,6 +95,7 @@ const INITIAL_POPULAR = [
   },
   {
     id: 155,
+    mediaType: 'movie',
     Title: "The Dark Knight",
     Year: "2008",
     imdbRating: "9.0",
@@ -154,7 +157,7 @@ function CineTrackApp() {
   const [activeLegalModal, setActiveLegalModal] = useState(null);
   const [liveWatchProviders, setLiveWatchProviders] = useState([]);
 
-  // Notifications & Micro-animations
+  // Notifications & UI Animations
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState(DEFAULT_ALERTS);
   const [unreadCount, setUnreadCount] = useState(2);
@@ -163,8 +166,10 @@ function CineTrackApp() {
 
   const cacheRef = useRef({});
   const searchTimeoutRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // Safe Watchlist Init
+  // Watchlist Local Storage with Quota Protection
   const [watchlist, setWatchlist] = useState(() => {
     try {
       const saved = localStorage.getItem('cinetrack_pro_v2_watchlist');
@@ -174,42 +179,42 @@ function CineTrackApp() {
     }
   });
 
-  // Watchlist Sync to LocalStorage
   useEffect(() => {
     try {
-      const cleanList = (watchlist || []).slice(0, 150).map(m => ({
+      const cleanList = (watchlist || []).slice(0, 200).map(m => ({
         id: m.id,
+        mediaType: m.mediaType || 'movie',
         Title: m.Title || 'Movie',
         Year: m.Year || '',
         imdbRating: m.imdbRating || '7.0',
         Poster: m.Poster || SVG_POSTER_PLACEHOLDER,
         Backdrop: m.Backdrop || '',
-        Plot: m.Plot ? m.Plot.slice(0, 250) : '',
+        Plot: m.Plot ? m.Plot.slice(0, 300) : '',
         Genre: m.Genre || 'Cinema',
         userStatus: m.userStatus || 'Plan to Watch',
         personalRating: m.personalRating || 0
       }));
       localStorage.setItem('cinetrack_pro_v2_watchlist', JSON.stringify(cleanList));
     } catch (err) {
-      console.warn("Storage Quota Guard:", err);
+      console.warn("Storage Quota Guard Triggered:", err);
     }
   }, [watchlist]);
 
-  // Scroll Listener for Back-To-Top Button
   useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 400);
-    };
+    const handleScroll = () => setShowScrollTop(window.scrollY > 400);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const showToast = (msg) => {
+  const showToast = useCallback((msg) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 2200);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 2400);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   const closeModalsSafely = useCallback(() => {
     setActiveTrailer(null);
@@ -218,7 +223,6 @@ function CineTrackApp() {
     setIsNotificationsOpen(false);
   }, []);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') closeModalsSafely();
@@ -227,7 +231,6 @@ function CineTrackApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [closeModalsSafely]);
 
-  // Dynamic Page Title & Scroll Lock
   useEffect(() => {
     if (selectedMovie) {
       document.title = `${selectedMovie.Title} • CineTrack`;
@@ -248,20 +251,26 @@ function CineTrackApp() {
     };
   }, [selectedMovie, activeTrailer, activeLegalModal, activeTab, watchlist.length]);
 
-  const formatTmdbMovie = useCallback((item) => {
+  // Robust Formatter (Handles Movie & TV Series seamlessly)
+  const formatTmdbItem = useCallback((item) => {
     const currentYear = new Date().getFullYear().toString();
+    const releaseDate = item?.release_date || item?.first_air_date || '';
+    const title = item?.title || item?.name || item?.original_title || item?.original_name || 'Untitled Cinema';
+    const isTV = Boolean(item?.first_air_date || item?.name);
+
     return {
       id: item?.id || Math.floor(Math.random() * 100000),
-      Title: item?.title || item?.original_title || 'Untitled Cinema',
-      Year: item?.release_date ? item.release_date.split('-')[0] : currentYear,
+      mediaType: isTV ? 'tv' : 'movie',
+      Title: title,
+      Year: releaseDate ? releaseDate.split('-')[0] : currentYear,
       imdbRating: item?.vote_average ? item.vote_average.toFixed(1) : '7.5',
       Poster: item?.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : SVG_POSTER_PLACEHOLDER,
       Backdrop: item?.backdrop_path ? `${BACKDROP_BASE_URL}${item.backdrop_path}` : (item?.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : ''),
-      Plot: item?.overview || 'No synopsis provided.',
-      Genre: 'Cinema',
+      Plot: item?.overview || 'No synopsis provided for this title.',
+      Genre: isTV ? 'TV Series' : 'Cinema',
       Actors: 'Featured Cast',
-      Director: 'Director',
-      Runtime: '120 min'
+      Director: isTV ? 'Creator / Showrunner' : 'Director',
+      Runtime: isTV ? 'Episodes' : '120 min'
     };
   }, []);
 
@@ -271,23 +280,20 @@ function CineTrackApp() {
       return;
     }
 
-    if (pageNum === 1) {
-      setIsLoading(true);
-    } else {
-      setIsPaginating(true);
-    }
+    if (pageNum === 1) setIsLoading(true);
+    else setIsPaginating(true);
     setErrorMessage(null);
 
     try {
       const endpoint = genre === 'Trending'
-        ? `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=${pageNum}`
+        ? `${TMDB_BASE_URL}/trending/all/week?api_key=${TMDB_API_KEY}&page=${pageNum}`
         : `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${GENRE_MAP[genre]}&sort_by=popularity.desc&page=${pageNum}`;
 
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error('API request failed');
       const data = await res.json();
       if (data && data.results && data.results.length > 0) {
-        const formatted = data.results.map(formatTmdbMovie);
+        const formatted = data.results.map(formatTmdbItem);
         if (append) {
           setMovies(prev => {
             const existingIds = new Set(prev.map(m => m.id));
@@ -307,20 +313,18 @@ function CineTrackApp() {
       setIsLoading(false);
       setIsPaginating(false);
     }
-  }, [formatTmdbMovie]);
+  }, [formatTmdbItem]);
 
   useEffect(() => {
     fetchCategoryMovies('Trending', 1);
   }, [fetchCategoryMovies]);
 
-  // Load More Handler (Pagination)
   const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
     fetchCategoryMovies(selectedGenre, nextPage, true);
   };
 
-  // Surprise Me Functionality (With 360° Dice Spin Micro-animation)
   const handleSurpriseMe = () => {
     if (movies.length === 0) return;
     setIsSpinningDice(true);
@@ -332,7 +336,7 @@ function CineTrackApp() {
     openMovieDetails(luckyMovie);
   };
 
-  // Execute TMDB Search API
+  // Search with AbortController to kill network race conditions
   const executeSearch = useCallback(async (rawQuery) => {
     const query = (rawQuery || '').trim();
     if (!query) {
@@ -341,29 +345,38 @@ function CineTrackApp() {
       return;
     }
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
       const res = await fetch(
-        `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
+        `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`,
+        { signal: abortControllerRef.current.signal }
       );
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
 
       if (data && data.results && data.results.length > 0) {
-        setMovies(data.results.map(formatTmdbMovie));
+        const filteredMedia = data.results.filter(i => i.media_type === 'movie' || i.media_type === 'tv');
+        setMovies(filteredMedia.map(formatTmdbItem));
       } else {
         setMovies(INITIAL_POPULAR);
-        setErrorMessage(`No titles found for "${query}". Showing popular cinema.`);
+        setErrorMessage(`No cinema found for "${query}". Showing popular releases.`);
       }
-    } catch {
-      setMovies(INITIAL_POPULAR);
-      setErrorMessage("Network issue detected. Running in safety mode.");
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setMovies(INITIAL_POPULAR);
+        setErrorMessage("Network issue detected. Safety cache restored.");
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [selectedGenre, fetchCategoryMovies, formatTmdbMovie]);
+  }, [selectedGenre, fetchCategoryMovies, formatTmdbItem]);
 
   const handleSearchChange = (val) => {
     setSearchQuery(val);
@@ -393,25 +406,28 @@ function CineTrackApp() {
     handleGenreChange('Trending');
   };
 
-  // Fetch Movie Details & Live India Watch Providers
   const openMovieDetails = async (movie) => {
     setSelectedMovie(movie);
     setLiveWatchProviders([]);
+    const type = movie.mediaType || 'movie';
 
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
+      const res = await fetch(`${TMDB_BASE_URL}/${type}/${movie.id}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
       if (res.ok) {
         const details = await res.json();
         if (details) {
           const genres = details.genres ? details.genres.map(g => g.name).join(', ') : movie.Genre;
-          const directorObj = details.credits?.crew?.find(c => c.job === 'Director');
+          const directorObj = details.credits?.crew?.find(c => c.job === 'Director') 
+                           || details.created_by?.[0];
           const castStr = details.credits?.cast ? details.credits.cast.slice(0, 4).map(c => c.name).join(', ') : movie.Actors;
-          const runtimeStr = details.runtime ? `${details.runtime} min` : movie.Runtime;
+          const runtimeStr = details.runtime 
+            ? `${details.runtime} min` 
+            : (details.episode_run_time?.[0] ? `${details.episode_run_time[0]} min` : movie.Runtime);
 
           setSelectedMovie(prev => (prev && prev.id === movie.id ? {
             ...prev,
             Genre: genres,
-            Director: directorObj ? directorObj.name : 'Not Specified',
+            Director: directorObj ? directorObj.name : 'Director',
             Actors: castStr,
             Runtime: runtimeStr,
             Plot: details.overview || prev.Plot
@@ -419,7 +435,7 @@ function CineTrackApp() {
         }
       }
 
-      const provRes = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/watch/providers?api_key=${TMDB_API_KEY}`);
+      const provRes = await fetch(`${TMDB_BASE_URL}/${type}/${movie.id}/watch/providers?api_key=${TMDB_API_KEY}`);
       if (provRes.ok) {
         const provData = await provRes.json();
         const inProviders = provData?.results?.IN;
@@ -440,50 +456,60 @@ function CineTrackApp() {
         setLiveWatchProviders(uniqueProviders.slice(0, 4));
       }
     } catch {
-      // Safe fallback
+      // Safe recovery
     }
   };
 
-  // ---------------- CRASH-PROOF & MISMATCH-FREE TRAILER SYSTEM ----------------
+  // ---------------- BULLETPROOF ZERO-CRASH TRAILER SYSTEM ----------------
   const handlePlayTrailer = async (movie) => {
     if (!movie) return;
 
-    // 1. Static high-accuracy cache
     if (STATIC_TRAILERS[movie.id]) {
       setActiveTrailer({
         videoId: STATIC_TRAILERS[movie.id],
-        title: movie.Title
+        title: movie.Title,
+        isFallback: false
       });
       return;
     }
 
+    const type = movie.mediaType || 'movie';
+
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}`);
+      const res = await fetch(`${TMDB_BASE_URL}/${type}/${movie.id}/videos?api_key=${TMDB_API_KEY}`);
       if (!res.ok) throw new Error('Video fetch failed');
       const data = await res.json();
 
-      // Look strictly for YouTube Trailer or Teaser
       const trailer = data?.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
 
       if (trailer && trailer.key) {
         setActiveTrailer({
           videoId: trailer.key,
-          title: movie.Title
+          title: movie.Title,
+          isFallback: false
         });
       } else {
-        // TMDB ke paas video nahi hai -> Kaali screen ke bajaye direct YouTube open karo
-        showToast(`Opening YouTube for "${movie.Title}"...`);
-        window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.Title + ' official trailer')}`, '_blank');
+        // Fallback card inside modal: No browser popup block!
+        setActiveTrailer({
+          videoId: null,
+          title: movie.Title,
+          isFallback: true,
+          searchQuery: encodeURIComponent(`${movie.Title} ${movie.Year || ''} official trailer`)
+        });
       }
     } catch {
-      showToast(`Opening YouTube for "${movie.Title}"...`);
-      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.Title + ' official trailer')}`, '_blank');
+      setActiveTrailer({
+        videoId: null,
+        title: movie.Title,
+        isFallback: true,
+        searchQuery: encodeURIComponent(`${movie.Title} ${movie.Year || ''} official trailer`)
+      });
     }
   };
 
   const handleShareMovie = async (movie, e) => {
     if (e) e.stopPropagation();
-    const shareText = `Check out "${movie.Title}" (${movie.Year}) on CineTrack • Rating: ${movie.imdbRating} ⭐`;
+    const shareText = `Check out "${movie.Title}" (${movie.Year}) on CineTrack • TMDB: ${movie.imdbRating} ⭐`;
     const shareUrl = window.location.href;
 
     if (navigator.share) {
@@ -494,7 +520,7 @@ function CineTrackApp() {
           url: shareUrl
         });
       } catch {
-        // User dismissed
+        // Dismissed
       }
     } else {
       navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
@@ -571,11 +597,32 @@ function CineTrackApp() {
     showToast("Watchlist backup downloaded!");
   };
 
+  // Two-Way Backup: Import Feature
+  const handleImportWatchlist = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (Array.isArray(parsed)) {
+          setWatchlist(parsed);
+          showToast(`Successfully restored ${parsed.length} cinema titles!`);
+        } else {
+          showToast("Invalid backup file format!");
+        }
+      } catch {
+        showToast("Error reading backup file!");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleToggleNotifications = () => {
     setIsNotificationsOpen(!isNotificationsOpen);
-    if (!isNotificationsOpen) {
-      setUnreadCount(0);
-    }
+    if (!isNotificationsOpen) setUnreadCount(0);
   };
 
   const stats = useMemo(() => {
@@ -662,7 +709,6 @@ function CineTrackApp() {
 
         <div className="nav-actions" style={{ position: 'relative' }}>
           
-          {/* Notification Bell Icon */}
           <button
             onClick={handleToggleNotifications}
             title="Release Alerts"
@@ -703,7 +749,6 @@ function CineTrackApp() {
             )}
           </button>
 
-          {/* Compact Surprise Icon Button */}
           <button
             onClick={handleSurpriseMe}
             title="Pick a random top movie!"
@@ -722,7 +767,6 @@ function CineTrackApp() {
             <Dices size={16} color="#facc15" className={isSpinningDice ? 'dice-spinning' : ''} />
           </button>
 
-          {/* Watchlist Counter Button */}
           <button
             onClick={() => setActiveTab(activeTab === 'watchlist' ? 'explore' : 'watchlist')}
             style={{
@@ -744,7 +788,6 @@ function CineTrackApp() {
             Watchlist ({watchlist.length})
           </button>
 
-          {/* Slide-out Notification Drawer */}
           {isNotificationsOpen && (
             <div 
               className="notification-tray"
@@ -811,7 +854,7 @@ function CineTrackApp() {
 
       <main className="container" style={{ flex: 1 }}>
         
-        {/* Dynamic Billboard */}
+        {/* Dynamic Netflix Billboard */}
         {activeTab === 'explore' && !searchQuery && heroMovie && (
           <div className="hero-billboard" onClick={() => openMovieDetails(heroMovie)}>
             <div className="hero-backdrop-wrapper">
@@ -934,7 +977,7 @@ function CineTrackApp() {
           </div>
         )}
 
-        {/* Real-time Debounced Search Bar */}
+        {/* Search Bar */}
         {activeTab === 'explore' && (
           <form onSubmit={handleSearchSubmit} className="search-wrapper">
             <div className="search-input-box">
@@ -1050,7 +1093,7 @@ function CineTrackApp() {
           </div>
         )}
 
-        {/* Watchlist Filter Controls */}
+        {/* Watchlist Filter & Two-Way Backup Controls */}
         {activeTab === 'watchlist' && (
           <div style={{ margin: '0.8rem 0 1.2rem 0', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -1112,6 +1155,33 @@ function CineTrackApp() {
                 }}
               >
                 <Download size={12} /> Export
+              </button>
+
+              {/* Seamless Restore */}
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImportWatchlist} 
+                accept=".json" 
+                style={{ display: 'none' }} 
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title="Restore from JSON Backup"
+                style={{
+                  background: 'rgba(168, 85, 247, 0.12)',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                  color: '#c084fc',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Upload size={12} /> Import
               </button>
 
               {watchlist.length > 0 && (
@@ -1199,8 +1269,8 @@ function CineTrackApp() {
                       alt={movie?.Title || 'Movie'}
                       loading="lazy"
                       onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = SVG_POSTER_PLACEHOLDER;
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = SVG_POSTER_PLACEHOLDER;
                       }}
                       className="card-poster"
                       referrerPolicy="no-referrer"
@@ -1212,11 +1282,11 @@ function CineTrackApp() {
                           {movie?.Title}
                         </div>
                         <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '1px' }}>
-                          {movie?.Year || 'Cinema'} • TMDB VERIFIED
+                          {movie?.Year || 'Cinema'} • {movie?.mediaType === 'tv' ? 'TV SERIES' : 'TMDB VERIFIED'}
                         </div>
                       </div>
 
-                      {/* Instant HD Trailer Button */}
+                      {/* Instant Trailer Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1334,7 +1404,6 @@ function CineTrackApp() {
                     </div>
                   </div>
 
-                  {/* Native Affiliate Placement */}
                   {activeTab === 'explore' && idx === 5 && (
                     <div className="native-ad-card">
                       <span className="ad-badge">SPONSORED</span>
@@ -1359,7 +1428,7 @@ function CineTrackApp() {
             </div>
           )}
 
-          {/* Load More Pagination Button */}
+          {/* Load More Pagination */}
           {activeTab === 'explore' && !searchQuery && displayedMovies.length > 0 && (
             <div style={{ textAlign: 'center', margin: '2rem 0' }}>
               <button
@@ -1394,7 +1463,7 @@ function CineTrackApp() {
         </section>
       </main>
 
-      {/* Floating Back to Top Button */}
+      {/* Back to Top Button */}
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -1576,7 +1645,7 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* Verified YouTube Trailer Modal */}
+      {/* Verified YouTube Trailer Modal & Safe Zero-Popup-Block Fallback Card */}
       {activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
@@ -1628,14 +1697,68 @@ function CineTrackApp() {
               </button>
             </div>
 
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000' }}>
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${activeTrailer.videoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`}
-                title={`${activeTrailer.title} Trailer`}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {activeTrailer.videoId ? (
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${activeTrailer.videoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`}
+                  title={`${activeTrailer.title} Trailer`}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <div style={{
+                  padding: '24px',
+                  textAlign: 'center',
+                  background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.98), #070b13)',
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '12px'
+                  }}>
+                    <Play size={24} fill="#ef4444" color="#ef4444" style={{ marginLeft: '3px' }} />
+                  </div>
+                  <h4 style={{ color: '#f8fafc', fontSize: '1.05rem', fontWeight: 800, margin: '0 0 6px 0' }}>
+                    Preview Not Linked on TMDB
+                  </h4>
+                  <p style={{ color: '#94a3b8', fontSize: '0.8rem', maxWidth: '380px', margin: '0 0 18px 0', lineHeight: '1.4' }}>
+                    No direct embed was linked for this title. Tap below to launch verified search directly on YouTube.
+                  </p>
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${activeTrailer.searchQuery}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      background: 'linear-gradient(90deg, #dc2626, #ef4444)',
+                      color: '#ffffff',
+                      padding: '9px 20px',
+                      borderRadius: '24px',
+                      textDecoration: 'none',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      boxShadow: '0 4px 16px rgba(239, 68, 68, 0.45)'
+                    }}
+                  >
+                    Open on YouTube <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1672,8 +1795,8 @@ function CineTrackApp() {
                 src={selectedMovie?.Poster || SVG_POSTER_PLACEHOLDER}
                 alt={selectedMovie?.Title}
                 onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = SVG_POSTER_PLACEHOLDER;
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = SVG_POSTER_PLACEHOLDER;
                 }}
                 className="modal-poster"
                 referrerPolicy="no-referrer"
@@ -1723,7 +1846,7 @@ function CineTrackApp() {
                   </div>
                 </div>
 
-                {/* Where to Watch & Live Providers */}
+                {/* Where to Watch */}
                 <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
