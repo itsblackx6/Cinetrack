@@ -460,7 +460,7 @@ function CineTrackApp() {
     }
   };
 
-  // ---------------- BULLETPROOF ZERO-CRASH TRAILER SYSTEM ----------------
+  // ---------------- CRASH-PROOF & MEME-FILTERED TRAILER SYSTEM ----------------
   const handlePlayTrailer = async (movie) => {
     if (!movie) return;
 
@@ -480,7 +480,32 @@ function CineTrackApp() {
       if (!res.ok) throw new Error('Video fetch failed');
       const data = await res.json();
 
-      const trailer = data?.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
+      // 1. Filter out shorts, meme reels, fan edits, and TikToks
+      const validVideos = (data?.results || []).filter(v => {
+        if (v.site !== 'YouTube') return false;
+        const name = (v.name || '').toLowerCase();
+        if (
+          name.includes('what if') || 
+          name.includes('short') || 
+          name.includes('tiktok') || 
+          name.includes('reel') || 
+          name.includes('meme') || 
+          name.includes('fan edit') || 
+          name.includes('fan made') || 
+          name.includes('edit')
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+      // 2. Strict prioritization: Official Trailers first
+      const officialTrailer = validVideos.find(v => v.official === true && v.type === 'Trailer');
+      const generalTrailer = validVideos.find(v => v.type === 'Trailer');
+      const officialTeaser = validVideos.find(v => v.official === true && v.type === 'Teaser');
+      const generalTeaser = validVideos.find(v => v.type === 'Teaser');
+
+      const trailer = officialTrailer || generalTrailer || officialTeaser || generalTeaser;
 
       if (trailer && trailer.key) {
         setActiveTrailer({
@@ -489,7 +514,7 @@ function CineTrackApp() {
           isFallback: false
         });
       } else {
-        // Fallback card inside modal: No browser popup block!
+        // Safe Fallback Card: Mobile popup block immune
         setActiveTrailer({
           videoId: null,
           title: movie.Title,
@@ -854,7 +879,7 @@ function CineTrackApp() {
 
       <main className="container" style={{ flex: 1 }}>
         
-        {/* Dynamic Netflix Billboard */}
+        {/* Billboard Hero */}
         {activeTab === 'explore' && !searchQuery && heroMovie && (
           <div className="hero-billboard" onClick={() => openMovieDetails(heroMovie)}>
             <div className="hero-backdrop-wrapper">
