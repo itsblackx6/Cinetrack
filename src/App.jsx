@@ -444,16 +444,15 @@ function CineTrackApp() {
     }
   };
 
-  // ---------------- ROBUST TRAILER HANDLER ----------------
+  // ---------------- CRASH-PROOF & MISMATCH-FREE TRAILER SYSTEM ----------------
   const handlePlayTrailer = async (movie) => {
     if (!movie) return;
 
+    // 1. Static high-accuracy cache
     if (STATIC_TRAILERS[movie.id]) {
       setActiveTrailer({
         videoId: STATIC_TRAILERS[movie.id],
-        title: movie.Title,
-        year: movie.Year,
-        poster: movie.Poster
+        title: movie.Title
       });
       return;
     }
@@ -463,35 +462,22 @@ function CineTrackApp() {
       if (!res.ok) throw new Error('Video fetch failed');
       const data = await res.json();
 
-      const trailer = data?.results?.find(v => v.site === 'YouTube' && v.type === 'Trailer')
-                   || data?.results?.find(v => v.site === 'YouTube' && v.type === 'Teaser')
-                   || data?.results?.find(v => v.site === 'YouTube');
+      // Look strictly for YouTube Trailer or Teaser
+      const trailer = data?.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
 
       if (trailer && trailer.key) {
         setActiveTrailer({
           videoId: trailer.key,
-          title: movie.Title,
-          year: movie.Year,
-          poster: movie.Poster
+          title: movie.Title
         });
       } else {
-        // Fallback state with full context for the redirect screen
-        setActiveTrailer({
-          videoId: null,
-          title: movie.Title,
-          year: movie.Year,
-          poster: movie.Poster,
-          searchQuery: encodeURIComponent(`${movie.Title} ${movie.Year || ''} official trailer`)
-        });
+        // TMDB ke paas video nahi hai -> Kaali screen ke bajaye direct YouTube open karo
+        showToast(`Opening YouTube for "${movie.Title}"...`);
+        window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.Title + ' official trailer')}`, '_blank');
       }
     } catch {
-      setActiveTrailer({
-        videoId: null,
-        title: movie.Title,
-        year: movie.Year,
-        poster: movie.Poster,
-        searchQuery: encodeURIComponent(`${movie.Title} ${movie.Year || ''} official trailer`)
-      });
+      showToast(`Opening YouTube for "${movie.Title}"...`);
+      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.Title + ' official trailer')}`, '_blank');
     }
   };
 
@@ -825,7 +811,7 @@ function CineTrackApp() {
 
       <main className="container" style={{ flex: 1 }}>
         
-        {/* Dynamic Netflix-Style Billboard */}
+        {/* Dynamic Billboard */}
         {activeTab === 'explore' && !searchQuery && heroMovie && (
           <div className="hero-billboard" onClick={() => openMovieDetails(heroMovie)}>
             <div className="hero-backdrop-wrapper">
@@ -1590,7 +1576,7 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* YouTube HD Trailer Modal - Clean, Safe & Crash-Free */}
+      {/* Verified YouTube Trailer Modal */}
       {activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
@@ -1642,68 +1628,14 @@ function CineTrackApp() {
               </button>
             </div>
 
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {activeTrailer.videoId ? (
-                <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${activeTrailer.videoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`}
-                  title={`${activeTrailer.title} Trailer`}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                />
-              ) : (
-                <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  padding: '24px', 
-                  textAlign: 'center',
-                  background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.95), #070b13)',
-                  width: '100%',
-                  height: '100%'
-                }}>
-                  <div style={{
-                    width: '54px',
-                    height: '54px',
-                    borderRadius: '50%',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.35)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '12px'
-                  }}>
-                    <Play size={24} fill="#ef4444" color="#ef4444" style={{ marginLeft: '3px' }} />
-                  </div>
-                  <h4 style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 800, margin: '0 0 6px 0' }}>
-                    Preview Not Linked on TMDB
-                  </h4>
-                  <p style={{ color: '#94a3b8', fontSize: '0.78rem', maxWidth: '380px', margin: '0 0 16px 0', lineHeight: '1.4' }}>
-                    An official embed is not directly attached to this title. Watch the verified trailers directly on YouTube.
-                  </p>
-                  <a
-                    href={`https://www.youtube.com/results?search_query=${activeTrailer.searchQuery}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      background: 'linear-gradient(90deg, #dc2626, #ef4444)',
-                      color: '#ffffff',
-                      padding: '8px 18px',
-                      borderRadius: '24px',
-                      textDecoration: 'none',
-                      fontSize: '0.8rem',
-                      fontWeight: 800,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)'
-                    }}
-                  >
-                    Watch on YouTube <ExternalLink size={13} />
-                  </a>
-                </div>
-              )}
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000' }}>
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${activeTrailer.videoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`}
+                title={`${activeTrailer.title} Trailer`}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
             </div>
           </div>
         </div>
