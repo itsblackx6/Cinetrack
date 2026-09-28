@@ -163,7 +163,6 @@ function CineTrackApp() {
 
   const cacheRef = useRef({});
   const searchTimeoutRef = useRef(null);
-  const pushedHistoryRef = useRef(false);
 
   // Safe Watchlist Init
   const [watchlist, setWatchlist] = useState(() => {
@@ -212,44 +211,21 @@ function CineTrackApp() {
     }, 2200);
   };
 
-  // Back Button Navigation for Modals
+  const closeModalsSafely = useCallback(() => {
+    setActiveTrailer(null);
+    setSelectedMovie(null);
+    setActiveLegalModal(null);
+    setIsNotificationsOpen(false);
+  }, []);
+
+  // Keyboard navigation
   useEffect(() => {
-    const handlePopState = () => {
-      pushedHistoryRef.current = false;
-      if (isNotificationsOpen) {
-        setIsNotificationsOpen(false);
-      } else if (activeTrailer) {
-        setActiveTrailer(null);
-      } else if (selectedMovie) {
-        setSelectedMovie(null);
-      } else if (activeLegalModal) {
-        setActiveLegalModal(null);
-      } else if (activeTab === 'watchlist') {
-        setActiveTab('explore');
-      }
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') closeModalsSafely();
     };
-
-    if (activeTrailer || selectedMovie || activeLegalModal || activeTab === 'watchlist' || isNotificationsOpen) {
-      window.history.pushState({ modalOrTab: true }, '');
-      pushedHistoryRef.current = true;
-    }
-
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [activeTrailer, selectedMovie, activeLegalModal, activeTab, isNotificationsOpen]);
-
-  const closeModalsSafely = () => {
-    if (pushedHistoryRef.current) {
-      window.history.back();
-    } else {
-      setActiveTrailer(null);
-      setSelectedMovie(null);
-      setActiveLegalModal(null);
-      setIsNotificationsOpen(false);
-    }
-  };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [closeModalsSafely]);
 
   // Dynamic Page Title & Scroll Lock
   useEffect(() => {
@@ -267,14 +243,8 @@ function CineTrackApp() {
       document.body.style.overflow = 'unset';
     }
 
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') closeModalsSafely();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.style.overflow = 'unset';
-      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [selectedMovie, activeTrailer, activeLegalModal, activeTab, watchlist.length]);
 
@@ -438,14 +408,14 @@ function CineTrackApp() {
           const castStr = details.credits?.cast ? details.credits.cast.slice(0, 4).map(c => c.name).join(', ') : movie.Actors;
           const runtimeStr = details.runtime ? `${details.runtime} min` : movie.Runtime;
 
-          setSelectedMovie(prev => ({
+          setSelectedMovie(prev => (prev && prev.id === movie.id ? {
             ...prev,
             Genre: genres,
             Director: directorObj ? directorObj.name : 'Not Specified',
             Actors: castStr,
             Runtime: runtimeStr,
             Plot: details.overview || prev.Plot
-          }));
+          } : prev));
         }
       }
 
@@ -474,10 +444,16 @@ function CineTrackApp() {
     }
   };
 
+  // ---------------- FIXED TRAILER LOGIC (NO HARDCODED AVATAR) ----------------
   const handlePlayTrailer = async (movie) => {
     if (!movie) return;
+    
+    // Check local static cache first
     if (STATIC_TRAILERS[movie.id]) {
-      setActiveTrailer({ videoId: STATIC_TRAILERS[movie.id], title: movie.Title });
+      setActiveTrailer({ 
+        url: `https://www.youtube-nocookie.com/embed/${STATIC_TRAILERS[movie.id]}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`, 
+        title: movie.Title 
+      });
       return;
     }
 
@@ -485,15 +461,31 @@ function CineTrackApp() {
       const res = await fetch(`${TMDB_BASE_URL}/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}`);
       if (!res.ok) throw new Error('Video fetch failed');
       const data = await res.json();
-      const trailer = data?.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')) || data?.results?.[0];
+      
+      // Look specifically for official trailers or teasers on YouTube
+      const trailer = data?.results?.find(v => v.site === 'YouTube' && v.type === 'Trailer') 
+                   || data?.results?.find(v => v.site === 'YouTube' && v.type === 'Teaser')
+                   || data?.results?.find(v => v.site === 'YouTube');
 
       if (trailer && trailer.key) {
-        setActiveTrailer({ videoId: trailer.key, title: movie.Title });
+        setActiveTrailer({ 
+          url: `https://www.youtube-nocookie.com/embed/${trailer.key}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`, 
+          title: movie.Title 
+        });
       } else {
-        setActiveTrailer({ videoId: '5PSNL1qE6VY', title: movie.Title });
+        // SMART FALLBACK: Plays exact trailer search without Avatar hardcoding
+        const safeSearchQuery = encodeURIComponent(`${movie.Title} ${movie.Year || ''} official trailer`);
+        setActiveTrailer({ 
+          url: `https://www.youtube-nocookie.com/embed?listType=search&list=${safeSearchQuery}&autoplay=1&playsinline=1`, 
+          title: movie.Title 
+        });
       }
     } catch {
-      setActiveTrailer({ videoId: '5PSNL1qE6VY', title: movie.Title });
+      const safeSearchQuery = encodeURIComponent(`${movie.Title} ${movie.Year || ''} official trailer`);
+      setActiveTrailer({ 
+        url: `https://www.youtube-nocookie.com/embed?listType=search&list=${safeSearchQuery}&autoplay=1&playsinline=1`, 
+        title: movie.Title 
+      });
     }
   };
 
@@ -653,7 +645,7 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* Top Navbar with Pure Neon Cyan Zap Icon for CineTrack */}
+      {/* Top Navbar */}
       <header className="navbar">
         <div 
           className="meena-brand" 
@@ -719,7 +711,7 @@ function CineTrackApp() {
             )}
           </button>
 
-          {/* Compact Surprise Icon Button with 360 Spin */}
+          {/* Compact Surprise Icon Button */}
           <button
             onClick={handleSurpriseMe}
             title="Pick a random top movie!"
@@ -827,7 +819,7 @@ function CineTrackApp() {
 
       <main className="container" style={{ flex: 1 }}>
         
-        {/* Dynamic Netflix-Style Billboard */}
+        {/* Billboard Hero */}
         {activeTab === 'explore' && !searchQuery && heroMovie && (
           <div className="hero-billboard" onClick={() => openMovieDetails(heroMovie)}>
             <div className="hero-backdrop-wrapper">
@@ -1592,7 +1584,7 @@ function CineTrackApp() {
         </div>
       )}
 
-      {/* YouTube HD Trailer Modal */}
+      {/* YouTube HD Trailer Modal - Cleaned & Fixed */}
       {activeTrailer && (
         <div className="modal-overlay" onClick={closeModalsSafely}>
           <div 
@@ -1646,7 +1638,7 @@ function CineTrackApp() {
 
             <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000000' }}>
               <iframe
-                src={`https://www.youtube-nocookie.com/embed/${activeTrailer.videoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&playsinline=1`}
+                src={activeTrailer.url}
                 title={`${activeTrailer.title} Trailer`}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
